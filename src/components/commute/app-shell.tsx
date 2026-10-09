@@ -1,9 +1,9 @@
 import { router, usePathname } from 'expo-router';
 import { Tabs, TabList, TabSlot, TabTrigger, type TabTriggerSlotProps } from 'expo-router/ui';
 import { Pressable, StyleSheet, View } from 'react-native';
-import Animated, { useAnimatedStyle, useReducedMotion, useSharedValue, withSpring } from 'react-native-reanimated';
-import { useEffect, useState } from 'react';
-import { PressScale } from './motion';
+import Animated, { useAnimatedStyle, useReducedMotion, useSharedValue, withSequence, withSpring, withTiming } from 'react-native-reanimated';
+import { useEffect, useRef, useState } from 'react';
+import { EASE_OUT, PressScale, SPRING } from './motion';
 import { requestScrollToTop } from './scroll-top';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ThemedText } from '../themed-text';
@@ -19,13 +19,14 @@ const navigation = [
 function TabButton({ isFocused, children, icon, mobile, ...props }: TabTriggerSlotProps & { icon: 'compass' | 'map' | 'book'; mobile: boolean }) {
   const t = useTheme();
   const reduced = useReducedMotion();
-  // The indicator grows out from the centre under the active tab; the icon settles in with a small pop.
+  // The indicator eases in from the centre (no overshoot); the newly active icon gives one soft pulse.
   const grow = useSharedValue(isFocused ? 1 : 0);
-  const pop = useSharedValue(isFocused ? 1 : .92);
+  const pop = useSharedValue(1);
+  const firstRun = useRef(true);
   useEffect(() => {
-    if (reduced) { grow.value = isFocused ? 1 : 0; pop.value = 1; return; }
-    grow.value = withSpring(isFocused ? 1 : 0, { damping: 18, stiffness: 260 });
-    pop.value = withSpring(isFocused ? 1 : .92, { damping: 12, stiffness: 200 });
+    if (firstRun.current || reduced) { firstRun.current = false; grow.value = isFocused ? 1 : 0; return; }
+    grow.value = withTiming(isFocused ? 1 : 0, EASE_OUT);
+    if (isFocused) pop.value = withSequence(withTiming(1.1, { duration: 140 }), withSpring(1, SPRING));
   }, [isFocused, reduced, grow, pop]);
   const indicator = useAnimatedStyle(() => ({ transform: [{ scaleX: grow.value }], opacity: grow.value }));
   const iconStyle = useAnimatedStyle(() => ({ transform: [{ scale: pop.value }] }));
@@ -35,6 +36,19 @@ function TabButton({ isFocused, children, icon, mobile, ...props }: TabTriggerSl
     <Animated.View style={iconStyle}><Icon name={icon} color={isFocused ? t.primary : t.textSecondary} size={19} /></Animated.View>
     <ThemedText type="small" style={{ color: isFocused ? t.primary : t.textSecondary, fontWeight: isFocused ? '600' : '500', fontSize: mobile ? 13 : 16 }}>{children}</ThemedText>
   </Pressable>;
+}
+/** Sun/moon button: the icon turns a half-circle with each switch. */
+function ThemeToggle({ dark, onToggle, color, line }: { dark: boolean; onToggle: () => void; color: string; line: string }) {
+  const reduced = useReducedMotion();
+  const turn = useSharedValue(dark ? 180 : 0);
+  useEffect(() => {
+    turn.value = reduced ? (dark ? 180 : 0) : withSpring(dark ? 180 : 0, SPRING);
+  }, [dark, reduced, turn]);
+  const spin = useAnimatedStyle(() => ({ transform: [{ rotate: `${turn.value}deg` }] }));
+  return <PressScale accessibilityRole="button" accessibilityLabel={`Switch to ${dark ? 'light' : 'dark'} mode`} onPress={onToggle}
+    hoverLift={false} style={[styles.theme, { borderColor: line }]}>
+    <Animated.View style={spin}><Icon name={dark ? 'sun' : 'moon'} color={color} /></Animated.View>
+  </PressScale>;
 }
 export default function AppTabs() {
   const t = useTheme();
@@ -57,7 +71,7 @@ export default function AppTabs() {
         {desktop && <View style={styles.nav}>{links(false)}</View>}
         <View style={styles.actions}>
           {desktop && <View style={[styles.pill, { backgroundColor: t.greenSoft }]}><Icon name="shield" size={15} color={t.green} /><ThemedText type="small" style={{ color: t.green, fontSize: 13 }}>Works offline</ThemedText></View>}
-          <Pressable accessibilityRole="button" accessibilityLabel={`Switch to ${t.dark ? 'light' : 'dark'} mode`} onPress={t.toggle} style={({ pressed }) => [styles.theme, { borderColor: t.line, opacity: pressed ? .65 : 1 }]}><Icon name={t.dark ? 'sun' : 'moon'} color={t.textSecondary} /></Pressable>
+          <ThemeToggle dark={t.dark} onToggle={t.toggle} color={t.textSecondary} line={t.line} />
         </View>
       </View>
       <View style={styles.ribbon} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">

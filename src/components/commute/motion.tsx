@@ -4,11 +4,16 @@ import Animated, {
   FadeIn, FadeInUp, useAnimatedStyle, useReducedMotion, useSharedValue, withSpring, withTiming,
 } from 'react-native-reanimated';
 
+/** Premium feel: soft springs with almost no overshoot, and tweens that ease out. */
+export const SPRING = { damping: 26, stiffness: 240, mass: 0.9 };
+export const SPRING_SNAP = { damping: 24, stiffness: 420, mass: 0.7 };
+export const EASE_OUT = { duration: 280 };
+
 /** Entrance: fade up after `delay` ms. Skipped when the OS asks for reduced motion. */
 export function Reveal({ children, delay = 0, style }: { children: ReactNode; delay?: number; style?: StyleProp<ViewStyle> }) {
   const reduced = useReducedMotion();
   if (reduced) return <Animated.View style={style}>{children}</Animated.View>;
-  return <Animated.View entering={FadeInUp.duration(520).delay(delay)} style={style}>
+  return <Animated.View entering={FadeInUp.duration(640).delay(delay)} style={style}>
     {children}
   </Animated.View>;
 }
@@ -33,12 +38,12 @@ export function PressScale({ children, disabled = false, style, wrapperStyle, ho
   const fade = useSharedValue(1);
   const [down, setDown] = useState(false);
   const [hover, setHover] = useState(false);
-  useEffect(() => { fade.value = withTiming(disabled ? .45 : 1, { duration: 220 }); }, [disabled, fade]);
+  useEffect(() => { fade.value = withTiming(disabled ? .45 : 1, EASE_OUT); }, [disabled, fade]);
   useEffect(() => {
-    if (!reduced) scale.value = withSpring(down ? .97 : 1, { damping: 18, stiffness: 320 });
+    if (!reduced) scale.value = withSpring(down ? .975 : 1, SPRING_SNAP);
   }, [down, reduced, scale]);
   useEffect(() => {
-    if (!reduced) lift.value = withSpring(hover && hoverLift && !disabled ? -3 : 0, { damping: 16, stiffness: 220 });
+    if (!reduced) lift.value = withSpring(hover && hoverLift && !disabled ? -2 : 0, SPRING);
   }, [hover, hoverLift, disabled, reduced, lift]);
   const animated = useAnimatedStyle(() => ({
     transform: [{ translateY: lift.value }, { scale: scale.value }], opacity: fade.value,
