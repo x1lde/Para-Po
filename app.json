@@ -33,7 +33,13 @@
           "imageWidth": 76
         }
       ],
-      "expo-sqlite"
+      "expo-sqlite",
+      "@maplibre/maplibre-react-native",
+      ["expo-location", {
+        "locationWhenInUsePermission": "Allow Para-Po to show your position and nearby supported boarding points.",
+        "isIosBackgroundLocationEnabled": false,
+        "isAndroidBackgroundLocationEnabled": false
+      }]
     ],
     "experiments": {
       "typedRoutes": true,

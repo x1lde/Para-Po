@@ -11,10 +11,11 @@ Para-Po is an offline-first public transportation identifier MVP. This scaffold 
 | `src/components/ui/` | Reusable UI primitives shared across features. |
 | `src/features/recognition/components/` | Future recognition UI, such as capture controls and recognition results. |
 | `src/features/recognition/services/` | Future TensorFlow Lite model loading, input preparation, inference, and result mapping. |
-| `src/features/location/services/` | Future Expo Location permission handling, position retrieval, and location subscriptions. |
+| `src/features/location/services/` | Foreground location permission, bounded GPS fix, quality checks, and eligible boarding-point straight-line ranking. |
 | `src/features/transport/components/` | Future transport information cards, lists, and details. |
 | `src/features/transport/services/` | Offline transport lookup and explicit guidance completeness checks. |
-| `src/features/maps/components/` | Future MapLibre map presentation, markers, and overlays. |
+| `src/features/maps/components/` | MapLibre native rendering, markers, sourced overlays, and offline/error/platform fallbacks. |
+| `src/features/maps/services/` | Validate/map lookup coordinates and accept sourced route geometry; no route generation. |
 | `src/database/` | Expo SQLite initialization, schema, migrations, dataset validation, and bundled catalog data. |
 | `src/database/repositories/` | Typed catalog and transport access. Keep SQL and persistence details out of UI components. |
 | `src/hooks/` | Shared React hooks; retain the existing theme and color scheme hooks. Keep feature-specific hooks with their feature when needed. |
@@ -44,6 +45,8 @@ These are planned work areas; scaffolding does not create or switch Git branches
 Start each branch from the team's agreed integration branch. Keep changes focused on its work area, review overlapping shared-file changes together, and merge small increments through review. Shared types, route layouts, package manifests, and Expo configuration need coordination because multiple branches may depend on them.
 
 ## Integration conventions
+
+The optional Map tab is implemented on `features/map`; see [maps.md](./maps.md) for native-build requirements, provider attribution, offline fallback, and frontend integration. GPS and real route geometry remain separate work.
 
 The concrete handoff is in [branch-integration.md](./branch-integration.md), including ownership, UI wiring, source-based presentation, and cross-branch verification.
 
