@@ -1,0 +1,37 @@
+{
+  "input": {
+    "shape": [
+      1,
+      224,
+      224,
+      3
+    ],
+    "dtype": "float32",
+    "color": "RGB",
+    "range": [
+      0,
+      255
+    ]
+  },
+  "output": {
+    "dtype": "float32",
+    "type": "softmax"
+  },
+  "labels": [
+    "ayala_malls_circuit",
+    "greenbelt"
+  ],
+  "confidence_threshold": 0.7,
+  "skipped_classes": {
+    "glorietta": 1,
+    "ayala_center": 2
+  },
+  "metrics": {
+    "train_images": 18,
+    "val_images": 4,
+    "val_accuracy": 0.75,
+    "val_confident_fraction": 0.75,
+    "val_accuracy_when_confident": 0.6666666666666666,
+    "keras_tflite_max_abs_diff": 0.02192533016204834
+  }
+}
