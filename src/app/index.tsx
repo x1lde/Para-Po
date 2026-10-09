@@ -1,8 +1,8 @@
 import { router } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
+import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 
-import { AppIcon, BodyText, Card, Kicker, PrimaryButton, RouteField, ScreenFrame, VehiclePixelArt, typography, useAppColors } from '@/components/commuter-ui';
+import { AppIcon, Badge, BodyText, Button, Card, CardDescription, CardHeader, CardTitle, EmptyState, Kicker, RouteField, ScreenFrame, SearchField, ToggleChip, VehiclePixelArt, typography, useAppColors } from '@/components/commuter-ui';
 import { commuterDataAvailable, commuterDataUnavailableMessage, listDestinations, listLandmarks, lookupTransportation } from '@/features/transport/components/commuter-data';
 import { filterOptionsByMode, getDestinationChoices, type RideModeFilter } from '@/features/transport/components/commuter-selection';
 import type { BoardingOption, Destination, Landmark, TransportLookupResult, TransportationType } from '@/features/transport/types';
@@ -220,7 +220,7 @@ export default function RideScreen() {
                 <AppIcon name="camera" size={23} color={colors.primary} />
               </View>
               <View style={styles.scanCopy}>
-                <Text style={[styles.scanTitle, { color: colors.primaryText }]}>Scan a landmark</Text>
+                <Text style={[typography.heading, { color: colors.primaryText }]}>Scan a landmark</Text>
                 <Text style={[styles.scanCaption, { color: colors.primaryText }]}>Recognize supported landmarks offline</Text>
               </View>
               <AppIcon name="arrowRight" size={18} color={colors.primaryText} />
@@ -230,15 +230,16 @@ export default function RideScreen() {
               <View style={styles.cardHeading}>
                 <View style={[styles.stepBadge, { backgroundColor: colors.backgroundSelected }]}><AppIcon name="location" size={19} color={colors.primary} /></View>
                 <View style={styles.headingCopy}>
-                  <Text style={[typography.sectionTitle, { color: colors.text }]}>Plan your ride</Text>
-                  <BodyText>Places come from the on-device SQLite catalog.</BodyText>
+                  <CardTitle>Plan your ride</CardTitle>
+                  <CardDescription>Places come from the on-device SQLite catalog.</CardDescription>
                 </View>
               </View>
               <View style={styles.fields}>
                 <RouteField label="Starting point" icon="location" value={selectedOrigin?.name} onPress={() => openPicker('origin')} />
+                <View style={[styles.connector, { borderColor: colors.border }]} />
                 <RouteField label="Destination" icon="destination" value={selectedDestination?.name} onPress={() => openPicker('destination')} />
               </View>
-              <PrimaryButton label="Find my ride" icon="arrowRight" onPress={findRide} disabled={!selectedOrigin || !selectedDestination || selectedDestination.id === selectedOrigin.id || lookupState === 'loading'} />
+              <Button label="Find my ride" variant="default" size="lg" icon="arrowRight" iconPosition="end" onPress={findRide} disabled={!selectedOrigin || !selectedDestination || selectedDestination.id === selectedOrigin.id || lookupState === 'loading'} />
               <View style={[styles.infoBox, { backgroundColor: colors.backgroundSelected }]}>
                 <AppIcon name="info" size={16} color={colors.plum} />
                 <BodyText style={styles.infoText}>
@@ -254,7 +255,7 @@ export default function RideScreen() {
             </Card>
 
             <View style={styles.rideTypes}>
-              <Text style={[styles.rideTypesTitle, { color: colors.text }]}>Ride types in the app</Text>
+              <Text style={[typography.sectionTitle, { color: colors.text }]}>Getting there, your way</Text>
               <View style={styles.typeRow}>
                 {(['Jeepney', 'E-jeep', 'Tricycle', 'Bus'] as const).map((type) => (
                   <View key={type} style={[styles.typePill, { borderColor: colors.border, backgroundColor: colors.backgroundElement }]}>
@@ -294,15 +295,19 @@ export default function RideScreen() {
                   onRetry={findRide}
                   onShowAll={() => setModeFilter('all')}
                 />
-                <ActionButton label="Back to trip planner" icon="arrowLeft" onPress={() => setScreen('planning')} />
+                <View style={styles.actionRow}>
+                  <Button label="Back to trip planner" variant="outline" icon="arrowLeft" onPress={() => setScreen('planning')} />
+                </View>
               </>
             ) : currentSelectedRide ? (
               <BoardingDetails option={currentSelectedRide} onOpenMap={() => openMap(currentSelectedRide)} onBack={() => setScreen('options')} />
             ) : (
               <Card>
-                <Text style={[typography.sectionTitle, { color: colors.text }]}>This ride is no longer selected</Text>
-                <BodyText>Return to the current ride options and choose a route again.</BodyText>
-                <ActionButton label="Back to ride options" icon="arrowLeft" onPress={() => setScreen('options')} />
+                <CardTitle>This ride is no longer selected</CardTitle>
+                <CardDescription>Return to the current ride options and choose a route again.</CardDescription>
+                <View style={styles.actionRow}>
+                  <Button label="Back to ride options" variant="outline" icon="arrowLeft" onPress={() => setScreen('options')} />
+                </View>
               </Card>
             )}
           </View>
@@ -343,7 +348,7 @@ function MapPreview({ onOpen }: { onOpen: () => void }) {
         <View style={styles.previewTitleRow}>
           <View>
             <Kicker>Area preview</Kicker>
-            <Text style={[typography.sectionTitle, { color: colors.text }]}>Makati map</Text>
+            <CardTitle>Makati map</CardTitle>
           </View>
           <AppIcon name="map" size={22} color={colors.primary} />
         </View>
@@ -351,7 +356,9 @@ function MapPreview({ onOpen }: { onOpen: () => void }) {
           <TransportMap scene={{ markers: [], routes: [], omittedLocations: [] }} />
         </View>
         <BodyText>Online map of Makati. Choose a ride to see its available location references and boarding guidance. Offline map downloads are not available.</BodyText>
-        <ActionButton label="Open map" icon="map" onPress={onOpen} />
+        <View style={styles.actionRow}>
+          <Button label="Open map" variant="outline" icon="map" onPress={onOpen} />
+        </View>
       </Card>
     </View>
   );
@@ -361,10 +368,10 @@ function JourneySummary({ origin, destination, onEdit }: { origin: Landmark | nu
   const colors = useAppColors();
   return (
     <Card>
-      <View style={styles.journeyHeader}>
-        <Text style={[typography.sectionTitle, { color: colors.text }]}>Your trip</Text>
-        <ActionButton label="Edit trip" onPress={onEdit} />
-      </View>
+      <CardHeader>
+        <CardTitle>Your trip</CardTitle>
+        <Button label="Edit trip" variant="link" onPress={onEdit} />
+      </CardHeader>
       <View style={styles.journeyPlaces}>
         <PlaceLine label="Starting point" name={origin?.name ?? 'Not selected'} />
         <AppIcon name="arrowRight" size={17} color={colors.textSecondary} />
@@ -380,22 +387,11 @@ function PlaceLine({ label, name }: { label: string; name: string }) {
 }
 
 function ModeFilters({ selected, onSelect }: { selected: RideModeFilter; onSelect: (mode: RideModeFilter) => void }) {
-  const colors = useAppColors();
   return (
     <View style={styles.filters} accessibilityLabel="Filter ride options by type">
-      {modeFilters.map((filter) => {
-        const active = selected === filter.id;
-        return (
-          <Pressable
-            key={filter.id}
-            accessibilityRole="button"
-            accessibilityState={{ selected: active }}
-            onPress={() => onSelect(filter.id)}
-            style={[styles.filterButton, { backgroundColor: active ? colors.primary : colors.backgroundElement, borderColor: active ? colors.primary : colors.border }]}>
-            <Text style={[styles.filterLabel, { color: active ? colors.primaryText : colors.text }]}>{filter.label}</Text>
-          </Pressable>
-        );
-      })}
+      {modeFilters.map((filter) => (
+        <ToggleChip key={filter.id} label={filter.label} active={selected === filter.id} onPress={() => onSelect(filter.id)} />
+      ))}
     </View>
   );
 }
@@ -419,17 +415,17 @@ function LookupContent({
 }) {
   const colors = useAppColors();
   if (state === 'loading') return <Card><ActivityIndicator accessibilityLabel="Loading ride options" color={colors.primary} /><BodyText>Checking the offline route catalog…</BodyText></Card>;
-  if (state === 'error') return <EmptyNotice title="Couldn’t load ride options" copy="The local route catalog returned an error. Your selected places are unchanged." actionLabel="Try again" onAction={onRetry} />;
-  if (!result) return <EmptyNotice title="No route results" copy="Choose a starting point and destination, then search again." />;
+  if (state === 'error') return <EmptyState title="Couldn’t load ride options" copy="The local route catalog returned an error. Your selected places are unchanged." actionLabel="Try again" onAction={onRetry} />;
+  if (!result) return <EmptyState title="No route results" copy="Choose a starting point and destination, then search again." />;
 
-  if (result.status === 'unsupported-origin') return <EmptyNotice title="Starting point unavailable" copy="That landmark is not in the current offline catalog. Choose another landmark." />;
-  if (result.status === 'unsupported-destination') return <EmptyNotice title="Destination unavailable" copy="That destination is not in the current offline catalog. Choose another supported destination." />;
-  if (result.status === 'already-at-destination') return <EmptyNotice title="You’re already at this place" copy="Choose a different destination to find a ride." />;
-  if (result.status === 'no-routes') return <EmptyNotice title="No supported route for this pair" copy="The offline catalog has no route for these places. Edit the trip to choose a different pair." />;
-  if (result.status === 'incomplete-guidance') return <EmptyNotice title="Route guidance is incomplete" copy="The catalog contains route records, but none meet its current source and instruction checks. No ride is being recommended." />;
+  if (result.status === 'unsupported-origin') return <EmptyState title="Starting point unavailable" copy="That landmark is not in the current offline catalog. Choose another landmark." />;
+  if (result.status === 'unsupported-destination') return <EmptyState title="Destination unavailable" copy="That destination is not in the current offline catalog. Choose another supported destination." />;
+  if (result.status === 'already-at-destination') return <EmptyState title="You’re already at this place" copy="Choose a different destination to find a ride." />;
+  if (result.status === 'no-routes') return <EmptyState title="No supported route for this pair" copy="The offline catalog has no route for these places. Edit the trip to choose a different pair." />;
+  if (result.status === 'incomplete-guidance') return <EmptyState title="Route guidance is incomplete" copy="The catalog contains route records, but none meet its current source and instruction checks. No ride is being recommended." />;
   if (options.length === 0) {
     return (
-      <EmptyNotice
+      <EmptyState
         title={filter === 'all' ? 'No ride options available' : `No ${modeFilters.find((item) => item.id === filter)?.label.toLowerCase()} routes here`}
         copy={filter === 'all' ? 'No eligible options were returned for this pair.' : 'This ride type has no matching route in the current catalog.'}
         actionLabel={filter === 'all' ? undefined : 'Show all ride types'}
@@ -461,19 +457,21 @@ function RideOptionCard({ option, sourceBased, onPress }: { option: BoardingOpti
       <View style={styles.optionTop}>
         <VehiclePixelArt mode={option.route.transportationType === 'jeepney' ? 'Jeepney' : 'Bus'} />
         <View style={styles.optionCopy}>
-          <Text style={[styles.optionTitle, { color: colors.text }]}>{transportLabel(option.route.transportationType)}</Text>
-          <Text style={[styles.optionSubtitle, { color: colors.textSecondary }]}>{option.route.name}</Text>
+          <Text style={[typography.heading, { color: colors.text }]}>{transportLabel(option.route.transportationType)}</Text>
+          <Text style={[typography.small, { color: colors.textSecondary }]}>{option.route.name}</Text>
         </View>
         <AppIcon name="chevronRight" size={18} color={colors.textSecondary} />
       </View>
       <Text style={[styles.optionBoarding, { color: colors.text }]}>Board at {option.boardingPoint.name}</Text>
       <View style={styles.estimatesRow}>
-        <Text style={[styles.estimateText, { color: colors.textSecondary }]}>Wait: unavailable</Text>
-        <Text style={[styles.estimateText, { color: colors.textSecondary }]}>Total time: unavailable</Text>
+        <Text style={[typography.small, { color: colors.textSecondary }]}>Wait: unavailable</Text>
+        <Text style={[typography.small, { color: colors.textSecondary }]}>Total time: unavailable</Text>
       </View>
-      <Text style={[styles.evidenceText, { color: sourceBased ? colors.gold : colors.success }]}>
-        {sourceBased ? 'Published-source suggestion • boarding not field-verified' : 'Meets local guidance checks'}
-      </Text>
+      <View style={styles.evidenceRow}>
+        <Badge variant={sourceBased ? 'gold' : 'success'}>
+          {sourceBased ? 'Published-source suggestion • boarding not field-verified' : 'Meets local guidance checks'}
+        </Badge>
+      </View>
     </Pressable>
   );
 }
@@ -488,14 +486,14 @@ function BoardingDetails({ option, onBack, onOpenMap }: { option: BoardingOption
         <View style={styles.detailTitleRow}>
           <VehiclePixelArt mode={option.route.transportationType === 'jeepney' ? 'Jeepney' : 'Bus'} />
           <View style={styles.optionCopy}>
-            <Text style={[styles.optionTitle, { color: colors.text }]}>{transportLabel(option.route.transportationType)}</Text>
-            <Text style={[styles.optionSubtitle, { color: colors.textSecondary }]}>{option.route.name}</Text>
+            <Text style={[typography.heading, { color: colors.text }]}>{transportLabel(option.route.transportationType)}</Text>
+            <Text style={[typography.small, { color: colors.textSecondary }]}>{option.route.name}</Text>
           </View>
         </View>
       </View>
 
       <Card>
-        <Text style={[styles.detailSectionTitle, { color: colors.text }]}>Before you board</Text>
+        <CardTitle>Before you board</CardTitle>
         <Instruction label="Boarding location" value={`${option.boardingPoint.name}${option.boardingVerified ? ' • verified' : ' • not field-verified'}`} />
         <Instruction label="Walk from starting point" value={option.originWalkingInstructions ?? 'Walking directions and estimate are unavailable.'} />
         <Instruction label="Signboard / boarding instruction" value={option.boardingInstructions ?? 'No signboard instruction is available.'} />
@@ -503,14 +501,14 @@ function BoardingDetails({ option, onBack, onOpenMap }: { option: BoardingOption
       </Card>
 
       <Card>
-        <Text style={[styles.detailSectionTitle, { color: colors.text }]}>At your destination</Text>
+        <CardTitle>At your destination</CardTitle>
         <Instruction label="Alight at" value={option.route.alightingLocation ?? 'Alighting point unavailable.'} />
         <Instruction label="Alighting instruction" value={option.route.alightingInstructions ?? 'No alighting instruction is available.'} />
         <Instruction label="Continue on foot" value={option.route.destinationWalkingInstructions ?? 'Destination walking directions are unavailable.'} />
       </Card>
 
       <Card>
-        <Text style={[styles.detailSectionTitle, { color: colors.text }]}>Estimate and source limits</Text>
+        <CardTitle>Estimate and source limits</CardTitle>
         <Instruction label="Wait / journey time" value="Not supplied by the offline catalog." />
         <Instruction label="Reviewed" value={option.route.reviewedOn ?? 'Review date unavailable.'} />
         <Instruction label="Source" value={option.route.sourceReference ?? 'No source recorded.'} />
@@ -518,8 +516,10 @@ function BoardingDetails({ option, onBack, onOpenMap }: { option: BoardingOption
       </Card>
 
       <View style={styles.actions}>
-        <PrimaryButton label="Open route map" icon="map" onPress={onOpenMap} />
-        <ActionButton label="Back to ride options" icon="arrowLeft" onPress={onBack} />
+        <Button label="Open route map" variant="default" size="lg" icon="map" onPress={onOpenMap} />
+        <View style={styles.actionRow}>
+          <Button label="Back to ride options" variant="outline" icon="arrowLeft" onPress={onBack} />
+        </View>
         <View style={[styles.infoBox, { backgroundColor: colors.backgroundSelected }]}>
           <AppIcon name="map" size={16} color={colors.textSecondary} />
           <BodyText style={styles.infoText}>The map needs internet and an Android build. Missing route paths or verified stop coordinates remain unavailable; these text instructions stay usable. Trip completion saving is not connected.</BodyText>
@@ -532,27 +532,6 @@ function BoardingDetails({ option, onBack, onOpenMap }: { option: BoardingOption
 function Instruction({ label, value }: { label: string; value: string }) {
   const colors = useAppColors();
   return <View style={styles.instruction}><Text style={[styles.instructionLabel, { color: colors.textSecondary }]}>{label}</Text><Text style={[styles.instructionValue, { color: colors.text }]}>{value}</Text></View>;
-}
-
-function EmptyNotice({ title, copy, actionLabel, onAction }: { title: string; copy: string; actionLabel?: string; onAction?: () => void }) {
-  const colors = useAppColors();
-  return (
-    <Card>
-      <Text style={[styles.emptyTitle, { color: colors.text }]}>{title}</Text>
-      <BodyText>{copy}</BodyText>
-      {actionLabel && onAction ? <ActionButton label={actionLabel} onPress={onAction} /> : null}
-    </Card>
-  );
-}
-
-function ActionButton({ label, onPress, icon }: { label: string; onPress: () => void; icon?: 'arrowLeft' | 'arrowRight' | 'map' }) {
-  const colors = useAppColors();
-  return (
-    <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => [styles.actionButton, { borderColor: colors.border }, pressed && styles.pressed]}>
-      {icon ? <AppIcon name={icon} size={16} color={colors.primary} /> : null}
-      <Text style={[styles.actionLabel, { color: colors.primary }]}>{label}</Text>
-    </Pressable>
-  );
 }
 
 function PlacePicker({
@@ -605,19 +584,19 @@ function PlacePicker({
               <AppIcon name="close" size={17} color={colors.text} />
             </Pressable>
           </View>
-          <View style={[styles.searchBox, { borderColor: colors.border, backgroundColor: colors.surfaceRaised }]}>
-            <AppIcon name="search" size={18} color={colors.textSecondary} />
-            <TextInput accessibilityLabel={`Search ${isOrigin ? 'starting points' : 'destinations'}`} placeholder="Search Makati places" placeholderTextColor={colors.textSecondary} value={query} onChangeText={onQueryChange} style={[styles.searchInput, { color: colors.text }]} />
-          </View>
+          <SearchField placeholder="Search Makati places" value={query} onChangeText={onQueryChange} accessibilityLabel={`Search ${isOrigin ? 'starting points' : 'destinations'}`} />
           <ScrollView style={styles.placeList} keyboardShouldPersistTaps="handled">
             {state === 'loading' ? <PickerLoading /> : null}
             {state === 'error' ? (
-              <PickerEmpty title={commuterDataAvailable ? 'Couldn’t read the offline place catalog' : 'Offline places unavailable here'} copy={commuterDataAvailable ? 'Your current selection is unchanged. Retry loading the local SQLite data.' : commuterDataUnavailableMessage}>
-                {commuterDataAvailable ? <ActionButton label="Try again" onPress={isOrigin ? onRetryLandmarks : onRetryDestinations} /> : null}
-              </PickerEmpty>
+              <EmptyState
+                title={commuterDataAvailable ? 'Couldn’t read the offline place catalog' : 'Offline places unavailable here'}
+                copy={commuterDataAvailable ? 'Your current selection is unchanged. Retry loading the local SQLite data.' : commuterDataUnavailableMessage}
+                actionLabel={commuterDataAvailable ? 'Try again' : undefined}
+                onAction={commuterDataAvailable ? (isOrigin ? onRetryLandmarks : onRetryDestinations) : undefined}
+              />
             ) : null}
             {state === 'ready' && filtered.length === 0 ? (
-              <PickerEmpty
+              <EmptyState
                 title={query.trim() ? 'No matching places' : isOrigin ? 'No landmarks available' : 'No destinations available'}
                 copy={query.trim() ? 'Try another name or clear your search.' : isOrigin ? 'The offline catalog has no landmarks to choose.' : 'The offline catalog has no destinations to choose.'}
               />
@@ -632,9 +611,7 @@ function PlacePicker({
               </Pressable>
             )) : null}
           </ScrollView>
-          <Pressable accessibilityRole="button" onPress={onClose} style={[styles.secondaryButton, { borderColor: colors.border }]}>
-            <Text style={[styles.secondaryButtonText, { color: colors.text }]}>Cancel</Text>
-          </Pressable>
+          <Button label="Cancel" variant="outline" onPress={onClose} />
         </View>
       </View>
     </Modal>
@@ -644,11 +621,6 @@ function PlacePicker({
 function PickerLoading() {
   const colors = useAppColors();
   return <View style={styles.pickerStatus}><ActivityIndicator accessibilityLabel="Loading places" color={colors.primary} /><BodyText>Loading places from this device…</BodyText></View>;
-}
-
-function PickerEmpty({ title, copy, children }: { title: string; copy: string; children?: React.ReactNode }) {
-  const colors = useAppColors();
-  return <View style={[styles.emptyState, { backgroundColor: colors.backgroundElement }]}><Text style={[styles.emptyTitle, { color: colors.text }]}>{title}</Text><BodyText style={styles.emptyCopy}>{copy}</BodyText>{children}</View>;
 }
 
 function transportLabel(type: TransportationType): string {
@@ -665,17 +637,16 @@ const styles = StyleSheet.create({
   compactPageTitle: { fontSize: 32, lineHeight: 38, letterSpacing: -0.5 },
   scanCard: { borderWidth: 1, minHeight: 96, borderRadius: Radius.card, paddingHorizontal: Space.four, paddingVertical: Space.three, flexDirection: 'row', alignItems: 'center', gap: Space.three },
   scanIcon: { width: 48, height: 48, borderRadius: Radius.medium, alignItems: 'center', justifyContent: 'center' },
-  scanCopy: { flex: 1, gap: Space.one },
-  scanTitle: { fontSize: 18, lineHeight: 23, fontWeight: '800' },
+  scanCopy: { flex: 1, minWidth: 0, gap: Space.one },
   scanCaption: { fontSize: 13, lineHeight: 18, opacity: 0.92, flexShrink: 1 },
   cardHeading: { flexDirection: 'row', alignItems: 'center', gap: Space.three },
   stepBadge: { width: 42, height: 42, borderRadius: Radius.medium, alignItems: 'center', justifyContent: 'center' },
-  headingCopy: { flex: 1, gap: Space.one },
+  headingCopy: { flex: 1, minWidth: 0, gap: Space.one },
   fields: { gap: Space.two },
+  connector: { width: 2, height: 14, borderLeftWidth: 2, borderStyle: 'dashed', marginLeft: 22 },
   infoBox: { padding: Space.three, borderRadius: Radius.medium, flexDirection: 'row', alignItems: 'flex-start', gap: Space.two },
   infoText: { flex: 1 },
   rideTypes: { gap: Space.two, paddingVertical: Space.two },
-  rideTypesTitle: { fontSize: 13, lineHeight: 18, fontWeight: '700' },
   typeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: Space.two },
   typePill: { borderWidth: 1, borderRadius: Radius.medium, minHeight: 58, paddingHorizontal: Space.two, paddingVertical: Space.two, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Space.one },
   typeText: { fontSize: 14, lineHeight: 18, fontWeight: '600' },
@@ -687,46 +658,27 @@ const styles = StyleSheet.create({
   sheetHandle: { width: 42, height: 5, borderRadius: Radius.pill, alignSelf: 'center', marginBottom: Space.two },
   sheetHeading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: Space.three },
   closeButton: { width: 48, height: 48, borderRadius: Radius.pill, alignItems: 'center', justifyContent: 'center' },
-  searchBox: { minHeight: 52, borderWidth: 1, borderRadius: Radius.medium, paddingHorizontal: Space.three, flexDirection: 'row', alignItems: 'center', gap: Space.two },
-  searchInput: { flex: 1, minHeight: 48, fontSize: 16 },
   placeList: { flexShrink: 1 },
   placeChoice: { minHeight: 56, borderBottomWidth: 1, flexDirection: 'row', alignItems: 'center', gap: Space.three, paddingVertical: Space.two },
   placeChoiceIcon: { width: 38, height: 38, borderRadius: Radius.small, alignItems: 'center', justifyContent: 'center' },
   placeChoiceName: { flex: 1, fontSize: 16, lineHeight: 22, fontWeight: '600' },
   pickerStatus: { minHeight: 100, justifyContent: 'center', alignItems: 'center', gap: Space.two },
-  emptyState: { borderRadius: Radius.medium, padding: Space.four, alignItems: 'center', gap: Space.two },
-  emptyTitle: { fontSize: 16, lineHeight: 22, fontWeight: '700', textAlign: 'center' },
-  emptyCopy: { textAlign: 'center', maxWidth: 380 },
-  secondaryButton: { minHeight: 52, borderWidth: 1, borderRadius: Radius.medium, alignItems: 'center', justifyContent: 'center' },
-  secondaryButtonText: { fontSize: 15, lineHeight: 20, fontWeight: '700' },
-  dialog: { width: '100%', maxWidth: 430, alignSelf: 'center', borderRadius: Radius.large, padding: Space.five, gap: Space.three },
-  dialogIcon: { width: 54, height: 54, borderRadius: Radius.medium, alignItems: 'center', justifyContent: 'center' },
-  cancelButton: { minHeight: 48, alignItems: 'center', justifyContent: 'center' },
-  cancelText: { fontSize: 15, lineHeight: 20, fontWeight: '700' },
-  journeyHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: Space.two },
   journeyPlaces: { flexDirection: 'row', alignItems: 'center', gap: Space.two, flexWrap: 'wrap' },
   placeLine: { flex: 1, minWidth: 120, gap: Space.one },
   placeLabel: { fontSize: 12, lineHeight: 16, fontWeight: '600' },
   placeName: { fontSize: 15, lineHeight: 21, fontWeight: '700' },
   filters: { flexDirection: 'row', flexWrap: 'wrap', gap: Space.two },
-  filterButton: { minHeight: 48, borderWidth: 1, borderRadius: Radius.pill, paddingHorizontal: Space.three, justifyContent: 'center' },
-  filterLabel: { fontSize: 14, lineHeight: 19, fontWeight: '700' },
   optionList: { gap: Space.three },
   optionCard: { borderWidth: 1, borderRadius: Radius.card, padding: Space.four, gap: Space.two },
   optionTop: { flexDirection: 'row', alignItems: 'center', gap: Space.three },
   optionCopy: { flex: 1, minWidth: 0, gap: Space.one },
-  optionTitle: { fontSize: 17, lineHeight: 23, fontWeight: '800' },
-  optionSubtitle: { fontSize: 14, lineHeight: 20 },
   optionBoarding: { fontSize: 15, lineHeight: 21, fontWeight: '700' },
   estimatesRow: { flexDirection: 'row', gap: Space.three, flexWrap: 'wrap' },
-  estimateText: { fontSize: 14, lineHeight: 19, fontWeight: '600' },
-  evidenceText: { fontSize: 13, lineHeight: 19, fontWeight: '700' },
-  actionButton: { minHeight: 48, borderWidth: 1, borderRadius: Radius.medium, paddingHorizontal: Space.three, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Space.two, alignSelf: 'flex-start' },
-  actionLabel: { fontSize: 14, lineHeight: 20, fontWeight: '700', textAlign: 'center' },
+  evidenceRow: { flexDirection: 'row', flexWrap: 'wrap', paddingTop: Space.one },
+  actionRow: { flexDirection: 'row', flexWrap: 'wrap', gap: Space.two },
   pressed: { opacity: 0.76 },
   detailContent: { gap: Space.four },
   detailTitleRow: { flexDirection: 'row', alignItems: 'center', gap: Space.three },
-  detailSectionTitle: { fontSize: 17, lineHeight: 23, fontWeight: '800' },
   instruction: { gap: Space.one },
   instructionLabel: { fontSize: 12, lineHeight: 17, fontWeight: '700' },
   instructionValue: { fontSize: 16, lineHeight: 24 },
