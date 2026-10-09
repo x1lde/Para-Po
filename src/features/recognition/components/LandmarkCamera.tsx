@@ -112,6 +112,7 @@ export function LandmarkCamera() {
         <Pressable accessibilityRole="button" accessibilityLabel="Back to ride planner" style={({ pressed }) => [styles.button, { borderColor: theme.line, opacity: pressed ? .65 : 1 }]} onPress={() => router.navigate('/')}><ThemedText type="link">Back to ride planner</ThemedText></Pressable>
         <View style={styles.cameraHeading}><Icon name="scan" size={28} /><ThemedText type="subtitle">A landmark is all it takes.</ThemedText></View>
         <ThemedText>Point at a familiar Makati building or place. Keep the landmark centred in the photo.</ThemedText>
+        <ThemedText type="small" themeColor="textSecondary">Photographing another screen can introduce glare and moiré patterns that lower recognition confidence. A clear photo of the actual landmark is a better input; screen-photo results still need your confirmation.</ThemedText>
         {Platform.OS === 'web' ? <ThemedText>Photo recognition is available in the mobile app. Choose your landmark below.</ThemedText>
           : <>
             {state.status === 'loading' && <><ActivityIndicator accessibilityLabel="Loading landmark recognition" /><ThemedText>Loading photo recognition…</ThemedText></>}

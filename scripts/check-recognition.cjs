@@ -30,7 +30,7 @@ function runtime(mocks = {}) {
       if (specifier in mocks) return mocks[specifier];
       if (specifier === 'jpeg-js') return jpeg;
       const target = resolve(specifier, filename);
-      const relative = path.relative(root, target);
+      const relative = path.relative(root, target).split(path.sep).join('/');
       if (mocks[relative] || mocks[`${relative}.ts`]) return mocks[relative] ?? mocks[`${relative}.ts`];
       for (const candidate of [target, `${target}.ts`, `${target}.native.ts`]) {
         if (/\.(json|tflite)$/.test(candidate) || (existsSync(candidate) && candidate.endsWith('.ts'))) return load(candidate);

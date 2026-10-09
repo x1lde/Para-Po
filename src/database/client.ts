@@ -42,7 +42,7 @@ async function openInitializedDatabase(): Promise<SQLiteDatabase> {
     await db.execAsync('PRAGMA foreign_keys = ON;');
     return db;
   } catch (error) {
-    await db.closeAsync();
+    try { await db.closeAsync(); } catch { /* Preserve the initialization failure for diagnosis/retry. */ }
     throw error;
   }
 }

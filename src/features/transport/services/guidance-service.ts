@@ -23,7 +23,7 @@ export function getGuidanceIssues(option: Omit<BoardingOption, 'guidanceIssues'>
 
 /** Coordinates enable proximity ranking but are not required for manual guidance. */
 export function isGuidanceReady(option: BoardingOption): boolean {
-  return option.guidanceIssues.every((issue) => issue === 'boarding-coordinates-unavailable');
+  return getGuidanceIssues(option).every((issue) => issue === 'boarding-coordinates-unavailable');
 }
 
 /** Named boarding/alighting instructions can be useful before exact access is confirmed. */
