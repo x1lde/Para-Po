@@ -66,9 +66,9 @@ export function AppHeader() {
           </View>
         </View>
       ) : null}
-      <View style={[styles.statusStack, compactHeader ? styles.compactStatusStack : null]} accessibilityLabel={`Network ${networkText}. Map data unavailable.`}>
+      <View style={[styles.statusStack, compactHeader ? styles.compactStatusStack : null]} accessibilityLabel={`Network ${networkText}. Map requires internet; offline maps are not downloaded.`}>
         <StatusPill icon="wifi" label={networkText} color={networkColor} />
-        <StatusPill icon="map" label="Map unavailable" color={colors.textSecondary} />
+        <StatusPill icon="map" label="Online map only" color={colors.textSecondary} />
       </View>
     </View>
   );

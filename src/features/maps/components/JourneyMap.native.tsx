@@ -3,8 +3,6 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'reac
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { listDestinationsForOrigin, listLandmarks } from '@/database/repositories/transport-repository';
-import { lookupTransportation } from '@/features/transport/services/transport-service';
 import type { Destination, Landmark, TransportLookupResult } from '@/features/transport/types';
 import { getForegroundLocation } from '@/features/location/services/location-service';
 import { rankBoardingOptions } from '@/features/location/services/proximity';
@@ -14,12 +12,17 @@ import { buildMapScene, withUserLocation } from '../services/map-scene';
 import type { MapMarker, MapScene } from '../types';
 import { ChoicePicker } from './ChoicePicker';
 import { TransportMap } from './TransportMap';
+import { loadMapJourney } from './journey-loader';
+import { useMapJourney } from './journey-context';
+import { router } from 'expo-router';
 
 export function JourneyMap() {
+  const { journey } = useMapJourney();
+  const [selectionUnavailable, setSelectionUnavailable] = useState(false);
   const [origins, setOrigins] = useState<Landmark[]>([]);
   const [destinations, setDestinations] = useState<Destination[]>([]);
-  const [originId, setOriginId] = useState('ayala_malls_circuit');
-  const [destinationId, setDestinationId] = useState('one_ayala');
+  const [originId, setOriginId] = useState('');
+  const [destinationId, setDestinationId] = useState('');
   const [result, setResult] = useState<TransportLookupResult | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -35,25 +38,27 @@ export function JourneyMap() {
   const selectionSequence = useRef(0);
   const locationSequence = useRef(0);
   const locationRequest = useRef<AbortController | null>(null);
-  const loadJourney = useCallback(async (origin: string, requestedDestination = 'one_ayala') => {
+  const loadJourney = useCallback(async (origin: string, requestedDestination = '', routeId?: string, boardingPointId?: string) => {
     const sequence = ++selectionSequence.current;
-    setLoading(true); setError(false); setResult(null); setSelectedMarker(null); setOriginId(origin); setFocusMode('journey');
-    setSelectedBoardingId(null); setSelectedRouteId(undefined);
+    setLoading(true); setError(false); setSelectionUnavailable(false); setResult(null); setSelectedMarker(null); setOriginId(origin); setDestinationId(requestedDestination); setFocusMode('journey');
+    setSelectedBoardingId(boardingPointId ?? null); setSelectedRouteId(routeId);
     try {
-      const [catalog, choices] = await Promise.all([listLandmarks(), listDestinationsForOrigin(origin)]);
-      const chosen = choices.some((item) => item.id === requestedDestination) ? requestedDestination : choices[0]?.id ?? '';
-      const next = chosen ? await lookupTransportation(origin, chosen) : null;
+      const next = await loadMapJourney({ originId: origin, destinationId: requestedDestination, routeId, boardingPointId });
       if (selectionSequence.current !== sequence) return;
-      setOrigins(catalog); setDestinations(choices); setDestinationId(chosen); setResult(next);
+      setOrigins(next.landmarks); setDestinations(next.destinations); setDestinationId(next.destinationId); setResult(next.result);
+      setSelectedBoardingId(next.selectedOption?.boardingPoint.id ?? null);
+      setSelectedRouteId(next.selectedOption?.route.id);
+      setSelectionUnavailable(next.selectionUnavailable);
       setFocusRequest((value) => value + 1);
     } catch { if (selectionSequence.current === sequence) setError(true); }
     finally { if (selectionSequence.current === sequence) setLoading(false); }
   }, []);
   useEffect(() => {
     let active = true;
-    void Promise.resolve().then(() => { if (active) void loadJourney('ayala_malls_circuit'); });
-    return () => { active = false; selectionSequence.current += 1; locationSequence.current += 1; locationRequest.current?.abort(); };
-  }, [loadJourney]);
+    void Promise.resolve().then(() => { if (active) void loadJourney(journey?.originId ?? '', journey?.destinationId ?? '', journey?.routeId, journey?.boardingPointId); });
+    return () => { active = false; selectionSequence.current += 1; };
+  }, [loadJourney, journey]);
+  useEffect(() => () => { locationSequence.current += 1; locationRequest.current?.abort(); }, []);
   useEffect(() => {
     if (!fix) return;
     const timer = setTimeout(() => {
@@ -84,10 +89,13 @@ export function JourneyMap() {
       : 'GPS unavailable. Manual selection still works.');
   };
   const scene = useMemo(() => {
-    const base: MapScene = result ? buildMapScene(result, BUNDLED_ROUTE_GEOMETRIES, MAP_PLACE_REFERENCES)
+    const mapResult = result && 'options' in result && selectedRouteId
+      ? { ...result, options: result.options.filter((option) => option.route.id === selectedRouteId && option.boardingPoint.id === selectedBoardingId) }
+      : result;
+    const base: MapScene = mapResult ? buildMapScene(mapResult, BUNDLED_ROUTE_GEOMETRIES, MAP_PLACE_REFERENCES)
       : { markers: [], routes: [], omittedLocations: [] };
     return withUserLocation(base, fix);
-  }, [result, fix]);
+  }, [result, fix, selectedRouteId, selectedBoardingId]);
   const options = result && 'options' in result ? result.options : [];
   const ranked = rankBoardingOptions(options, fix);
   const boardingPoints = [...new Map(ranked.map((item) => [item.option.boardingPoint.id, item.option.boardingPoint])).values()];
@@ -102,7 +110,7 @@ export function JourneyMap() {
     <SafeAreaView edges={['top']} style={styles.header}><ThemedText type="subtitle">Plan your journey</ThemedText>
       <ThemedText type="small">Offline guidance · Online map</ThemedText>
       <View style={styles.row}><View style={styles.choice}><ChoicePicker label="Starting landmark" value={originId} choices={origins}
-        onSelect={(id) => void loadJourney(id)} /></View>
+        onSelect={(id) => void loadJourney(id, id === destinationId ? '' : destinationId)} /></View>
       <View style={styles.choice}><ChoicePicker label="Destination" value={destinationId} choices={destinations} disabled={loading}
         onSelect={(id) => void loadJourney(originId, id)} /></View></View>
       <View style={styles.row}>
@@ -115,6 +123,9 @@ export function JourneyMap() {
         <Pressable accessibilityRole="button" disabled={!result} accessibilityState={{ disabled: !result }} style={styles.button}
           onPress={() => { setFocusMode('journey'); setFocusRequest((value) => value + 1); }}><ThemedText type="link">Show this journey</ThemedText></Pressable>
       </View><ThemedText type="small">{locationMessage}</ThemedText>
+      <Pressable accessibilityRole="button" style={styles.button} onPress={() => router.navigate('/')}>
+        <ThemedText type="link">Back to Ride</ThemedText>
+      </Pressable>
     </SafeAreaView>
     <View style={styles.map}><TransportMap scene={scene} focusMode={focusMode} focusRequest={focusRequest} onMarkerPress={selectMarker}
       selectedMarkerId={selectedBoardingId ? `boarding:${selectedBoardingId}` : activeMarker?.id} selectedRouteId={selectedRouteId} /></View>
@@ -126,8 +137,10 @@ export function JourneyMap() {
       {fix?.accuracyMeters !== null && fix?.accuracyMeters !== undefined && <ThemedText type="small">Purple area: reported GPS uncertainty, about {Math.round(fix.accuracyMeters)} m. It is not a walking radius.</ThemedText>}
       {loading && <ActivityIndicator accessibilityLabel="Loading journey" />}
       {error && <><ThemedText>Could not load local transportation data.</ThemedText><Pressable accessibilityRole="button" style={styles.button}
-        onPress={() => void loadJourney(originId, destinationId)}><ThemedText type="link">Retry data</ThemedText></Pressable></>}
-      {!loading && !error && destinations.length === 0 && <ThemedText>No bundled journeys for this starting landmark yet. Choose Circuit or One Ayala.</ThemedText>}
+        onPress={() => void loadJourney(originId, destinationId, selectedRouteId, selectedBoardingId ?? undefined)}><ThemedText type="link">Retry data</ThemedText></Pressable></>}
+      {!loading && !error && destinations.length === 0 && <ThemedText>No destinations are available in the local catalog.</ThemedText>}
+      {!loading && !error && (!originId || !destinationId) && <ThemedText>Choose a starting landmark and destination here, or select a ride on Ride to open its map. No journey is selected yet.</ThemedText>}
+      {selectionUnavailable && <ThemedText accessibilityLiveRegion="polite">The previously selected ride is no longer available for this journey. Review the current options below.</ThemedText>}
       {activeMarker && <ThemedView type="backgroundElement" style={styles.card}>
         <ThemedText type="smallBold">{activeMarker.name}{activeMarker.approximate ? ' (approximate)' : ''}</ThemedText>
         {activeMarker.details?.map((text) => <ThemedText type="small" key={text}>{text}</ThemedText>)}

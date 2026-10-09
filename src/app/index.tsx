@@ -1,3 +1,4 @@
+import { router } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
 
@@ -6,6 +7,8 @@ import { commuterDataAvailable, commuterDataUnavailableMessage, listDestinations
 import { filterOptionsByMode, getDestinationChoices, type RideModeFilter } from '@/features/transport/components/commuter-selection';
 import type { BoardingOption, Destination, Landmark, TransportLookupResult, TransportationType } from '@/features/transport/types';
 import { Radius, Space } from '@/constants/theme';
+import { useMapJourney } from '@/features/maps/components/journey-context';
+import { TransportMap } from '@/features/maps/components/TransportMap';
 
 type PickerKind = 'origin' | 'destination';
 type ScreenState = 'planning' | 'options' | 'boarding';
@@ -23,6 +26,7 @@ const modeFilters: { id: RideModeFilter; label: string }[] = [
 ];
 
 export default function RideScreen() {
+  const { setJourney } = useMapJourney();
   const colors = useAppColors();
   const { width } = useWindowDimensions();
   const wide = width >= 1024;
@@ -72,12 +76,21 @@ export default function RideScreen() {
   }, [destinationAttempt]);
 
   const clearPreviousRoute = () => {
+    setJourney(null);
     lookupRequest.current += 1;
     setLookupState('idle');
     setLookupResult(null);
     setSelectedRide(null);
     setModeFilter('all');
     setScreen('planning');
+  };
+
+  const openMap = (option?: BoardingOption) => {
+    setJourney(origin && destination ? {
+      originId: origin.id, destinationId: destination.id,
+      routeId: option?.route.id, boardingPointId: option?.boardingPoint.id,
+    } : null);
+    router.navigate('/map');
   };
 
   const openPicker = (kind: PickerKind) => {
@@ -89,15 +102,18 @@ export default function RideScreen() {
     if (picker === 'origin') {
       const nextOrigin = place as Landmark;
       if (nextOrigin.id !== origin?.id) {
+        const nextDestination = destination?.id === nextOrigin.id ? null : destination;
         setOrigin(nextOrigin);
-        setDestination((current) => current?.id === nextOrigin.id ? null : current);
+        setDestination(nextDestination);
         clearPreviousRoute();
+        if (nextDestination) setJourney({ originId: nextOrigin.id, destinationId: nextDestination.id });
       }
     } else if (picker === 'destination') {
       const nextDestination = place as Destination;
       if (nextDestination.id !== destination?.id) {
         setDestination(nextDestination);
         clearPreviousRoute();
+        if (origin) setJourney({ originId: origin.id, destinationId: nextDestination.id });
       }
     }
     setPicker(null);
@@ -106,6 +122,7 @@ export default function RideScreen() {
 
   const findRide = async () => {
     if (!origin || !destination || destination.id === origin.id) return;
+    setJourney({ originId: origin.id, destinationId: destination.id });
     const requestId = ++lookupRequest.current;
     setLookupState('loading');
     setLookupResult(null);
@@ -219,6 +236,8 @@ export default function RideScreen() {
                   onSelect={(option) => {
                     if (!currentOptions.some((item) => item.route.id === option.route.id && item.boardingPoint.id === option.boardingPoint.id)) return;
                     setSelectedRide(option);
+                    if (origin && destination) setJourney({ originId: origin.id, destinationId: destination.id,
+                      routeId: option.route.id, boardingPointId: option.boardingPoint.id });
                     setScreen('boarding');
                   }}
                   onRetry={findRide}
@@ -227,7 +246,7 @@ export default function RideScreen() {
                 <ActionButton label="Back to trip planner" icon="arrowLeft" onPress={() => setScreen('planning')} />
               </>
             ) : selectedRide ? (
-              <BoardingDetails option={selectedRide} onBack={() => setScreen('options')} />
+              <BoardingDetails option={selectedRide} onOpenMap={() => openMap(selectedRide)} onBack={() => setScreen('options')} />
             ) : (
               <Card>
                 <Text style={[typography.sectionTitle, { color: colors.text }]}>This ride is no longer selected</Text>
@@ -238,7 +257,7 @@ export default function RideScreen() {
           </View>
         )}
 
-        {wide && screen === 'planning' ? <MapPreview /> : null}
+        {wide && screen === 'planning' ? <MapPreview onOpen={() => openMap()} /> : null}
       </View>
 
       <PlacePicker
@@ -260,7 +279,7 @@ export default function RideScreen() {
   );
 }
 
-function MapPreview() {
+function MapPreview({ onOpen }: { onOpen: () => void }) {
   const colors = useAppColors();
   return (
     <View style={styles.previewColumn}>
@@ -272,14 +291,11 @@ function MapPreview() {
           </View>
           <AppIcon name="map" size={22} color={colors.primary} />
         </View>
-        <View style={[styles.mapPlaceholder, { backgroundColor: colors.backgroundSelected, borderColor: colors.border }]}>
-          <View style={[styles.mapPlaceholderIcon, { backgroundColor: colors.surfaceRaised }]}>
-            <AppIcon name="map" size={24} color={colors.textSecondary} />
-          </View>
-          <Text style={[styles.mapPlaceholderTitle, { color: colors.text }]}>Map data unavailable</Text>
-          <Text style={[styles.mapPlaceholderCopy, { color: colors.textSecondary }]}>No map renderer, verified route geometry, or offline map assets are connected.</Text>
+        <View style={[styles.mapPreview, { borderColor: colors.border }]}>
+          <TransportMap scene={{ markers: [], routes: [], omittedLocations: [] }} />
         </View>
-        <BodyText>Text directions are shown when the selected route includes them.</BodyText>
+        <BodyText>Online map of Makati. Choose a ride to see its available location references and boarding guidance. Offline map downloads are not available.</BodyText>
+        <ActionButton label="Open map" icon="map" onPress={onOpen} />
       </Card>
     </View>
   );
@@ -406,7 +422,7 @@ function RideOptionCard({ option, sourceBased, onPress }: { option: BoardingOpti
   );
 }
 
-function BoardingDetails({ option, onBack }: { option: BoardingOption; onBack: () => void }) {
+function BoardingDetails({ option, onBack, onOpenMap }: { option: BoardingOption; onBack: () => void; onOpenMap: () => void }) {
   const colors = useAppColors();
   return (
     <View style={styles.detailContent}>
@@ -446,10 +462,11 @@ function BoardingDetails({ option, onBack }: { option: BoardingOption; onBack: (
       </Card>
 
       <View style={styles.actions}>
+        <PrimaryButton label="Open route map" icon="map" onPress={onOpenMap} />
         <ActionButton label="Back to ride options" icon="arrowLeft" onPress={onBack} />
         <View style={[styles.infoBox, { backgroundColor: colors.backgroundSelected }]}>
           <AppIcon name="map" size={16} color={colors.textSecondary} />
-          <BodyText style={styles.infoText}>Route map, GPS-based nearest stop, and trip completion saving are unavailable.</BodyText>
+          <BodyText style={styles.infoText}>The map needs internet and an Android build. Missing route paths or verified stop coordinates remain unavailable; these text instructions stay usable. Trip completion saving is not connected.</BodyText>
         </View>
       </View>
     </View>
@@ -472,7 +489,7 @@ function EmptyNotice({ title, copy, actionLabel, onAction }: { title: string; co
   );
 }
 
-function ActionButton({ label, onPress, icon }: { label: string; onPress: () => void; icon?: 'arrowLeft' | 'arrowRight' }) {
+function ActionButton({ label, onPress, icon }: { label: string; onPress: () => void; icon?: 'arrowLeft' | 'arrowRight' | 'map' }) {
   const colors = useAppColors();
   return (
     <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => [styles.actionButton, { borderColor: colors.border }, pressed && styles.pressed]}>
@@ -629,10 +646,7 @@ const styles = StyleSheet.create({
   typeText: { fontSize: 14, lineHeight: 18, fontWeight: '600' },
   previewColumn: { flex: 1.65, minWidth: 300, paddingTop: Space.four },
   previewTitleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  mapPlaceholder: { minHeight: 300, borderWidth: 1, borderRadius: Radius.medium, alignItems: 'center', justifyContent: 'center', padding: Space.seven, gap: Space.two },
-  mapPlaceholderIcon: { width: 52, height: 52, borderRadius: Radius.medium, alignItems: 'center', justifyContent: 'center', marginBottom: Space.two },
-  mapPlaceholderTitle: { fontSize: 16, lineHeight: 22, fontWeight: '700', textAlign: 'center' },
-  mapPlaceholderCopy: { fontSize: 14, lineHeight: 20, textAlign: 'center', maxWidth: 280 },
+  mapPreview: { height: 300, borderWidth: 1, borderRadius: Radius.medium, overflow: 'hidden' },
   modalBackdrop: { flex: 1, justifyContent: 'flex-end', padding: Space.two },
   sheet: { width: '100%', maxWidth: 620, alignSelf: 'center', borderTopLeftRadius: Radius.large, borderTopRightRadius: Radius.large, borderBottomLeftRadius: Radius.medium, borderBottomRightRadius: Radius.medium, padding: Space.four, paddingBottom: Space.seven, gap: Space.four, maxHeight: '90%' },
   sheetHandle: { width: 42, height: 5, borderRadius: Radius.pill, alignSelf: 'center', marginBottom: Space.two },

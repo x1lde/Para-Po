@@ -21,7 +21,7 @@ function createSqliteAdapter(raw) {
   };
 }
 
-function loadNativeApp(openDatabaseAsync) {
+function loadNativeApp(openDatabaseAsync, entry = 'src/features/transport/components/commuter-data.ts') {
   const root = path.resolve();
   const cache = new Map();
   function load(filename) {
@@ -43,7 +43,7 @@ function loadNativeApp(openDatabaseAsync) {
     vm.runInThisContext(`(function(exports, require, module) { ${code}\n})`, { filename })(loaded.exports, localRequire, loaded);
     return loaded.exports;
   }
-  return load(path.join(root, 'src/features/transport/components/commuter-data.ts'));
+  return load(path.join(root, entry));
 }
 
 test('native commuter data exposes every SQLite destination, including unsupported pairs', async () => {
@@ -58,4 +58,28 @@ test('native commuter data exposes every SQLite destination, including unsupport
   } finally {
     await db.closeAsync();
   }
+});
+
+
+test('map handoff keeps the chosen pair and validates the selected ride against SQLite', async () => {
+  const raw = new DatabaseSync(':memory:');
+  const db = createSqliteAdapter(raw);
+  try {
+    const { loadMapJourney } = loadNativeApp(async () => db, 'src/features/maps/components/journey-loader.ts');
+    const empty = await loadMapJourney(null);
+    assert.equal(empty.result, null);
+    assert.equal(empty.destinations.length, 14);
+    const chosen = await loadMapJourney({ originId: 'ayala_malls_circuit', destinationId: 'sm_makati',
+      routeId: 'circuit-p2p-via-one-ayala-to-sm-makati', boardingPointId: 'circuit-cityflats-p2p-loading' });
+    assert.equal(chosen.result.destination.id, 'sm_makati');
+    assert.equal(chosen.selectedOption.route.id, 'circuit-p2p-via-one-ayala-to-sm-makati');
+    const unsupported = await loadMapJourney({ originId: 'rcbc_plaza', destinationId: 'powerplant_mall' });
+    assert.equal(unsupported.result.status, 'no-routes');
+    assert.equal(unsupported.destinationId, 'powerplant_mall');
+    assert.equal(unsupported.destinations.length, 13);
+    const stale = await loadMapJourney({ originId: 'ayala_malls_circuit', destinationId: 'one_ayala',
+      routeId: 'circuit-p2p-via-one-ayala-to-sm-makati', boardingPointId: 'circuit-cityflats-p2p-loading' });
+    assert.equal(stale.selectedOption, undefined);
+    assert.equal(stale.selectionUnavailable, true);
+  } finally { await db.closeAsync(); }
 });
