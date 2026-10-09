@@ -1,6 +1,6 @@
 # Web-sourced pilot recommendations
 
-Dataset 2 bundles six recommendation records using two named directional bus legs and four onward walking variants. These are not six distinct bus services. All 15 places remain in the catalog; uncovered combinations still return `no-routes`.
+Dataset 3 bundles six recommendation records using two named directional bus legs and four onward walking variants. These are not six distinct bus services. All 14 places remain in the catalog; uncovered combinations still return `no-routes`.
 
 The user authorized web-sourced suggestions without physical visits. `source-based` results now expose recommendations alongside evidence, limitations, and missing-detail flags. Their unresolved access/boarding flags remain false; they are not promoted to fully confirmed `available` guidance.
 

@@ -1,6 +1,6 @@
 # Offline-data verification
 
-Checks resumed on 2026-10-09. TypeScript and lint pass. `node scripts/check-offline-data.cjs` passes 11 grouped checks using production TS modules and isolated Node SQLite databases: initialization/concurrency, six sourced journeys and strict mode, invalid/same-place/uncovered IDs, idempotence, validation, forced-write rollback, ready-versus-sourced filtering, dataset replacement/downgrade prevention, populated schema 1/2 upgrades, and failed-initialization retry. These are desktop SQL/domain checks, not Expo native or physical Android verification.
+Checks resumed on 2026-10-09. TypeScript and lint pass. `node scripts/check-offline-data.cjs` passes 12 grouped checks using production TS modules and isolated Node SQLite databases: initialization/concurrency, six sourced journeys and strict mode, invalid/same-place/uncovered IDs, idempotence, validation, forced-write rollback, ready-versus-sourced filtering, dataset replacement/downgrade prevention, populated schema 1/2 upgrades, failed-initialization retry, and dataset 2-to-3 removal of the retired wine place from both catalogs. These are desktop SQL/domain checks, not Expo native or physical Android verification.
 
 Android export also passed: `node node_modules/expo/bin/cli export --platform android --output-dir .expo/offline-data-check-android` produced Hermes bytecode and assets for the existing app. The sandbox initially blocked the Hermes executable; the authorized rerun outside the sandbox succeeded. Output is under ignored `.expo/`. This verifies Android bundling, not an installed APK or native SQLite execution; existing screens still do not import the offline-data layer.
 
@@ -16,7 +16,7 @@ Use the repository's package manager convention. With npm, run `npm run lint` an
 
 | Check | Expected result |
 | --- | --- |
-| Bundled catalog | 15 landmarks and 15 destinations; stable names/IDs; no invented model labels. |
+| Bundled catalog | 14 landmarks and 14 destinations; stable names/IDs; no invented model labels. |
 | Duplicate IDs/labels or invalid coordinate pair | Validation rejects before any table replacement. |
 | Missing referenced origin/destination/point or duplicate order | Replacement rejected; previous dataset survives transaction rollback. |
 | Current Circuit pairs | `source-based` by default; missing details explicit. With fallback disabled, `incomplete-guidance`. |
@@ -35,7 +35,7 @@ Synthetic fixtures belong in an isolated test database and must never replace re
 
 Use isolated copies, not the demonstration database:
 
-1. Fresh installation reaches schema 3 and dataset 2.
+1. Fresh installation reaches schema 3 and dataset 3.
 2. Version 1 and 2 databases with nonempty reference data migrate to 3. Verify IDs, labels, coordinates, instruction text, and child relationships survive the schema migration. Use the same dataset version when isolating schema preservation from intended reseeding.
 3. Rebuilt parent foreign-key names remain correct; `PRAGMA foreign_key_check` returns no rows and `PRAGMA foreign_keys` returns 1 after initialization.
 4. Existing review fields default to pending/false; legacy data does not silently become a ready recommendation.

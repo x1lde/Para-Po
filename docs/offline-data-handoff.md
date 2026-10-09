@@ -8,7 +8,7 @@ See [branch-integration.md](./branch-integration.md) for frontend wiring order, 
 
 Import these from `@/database/repositories/transport-repository`:
 
-- `listLandmarks()`: the 15-place manual origin catalog, sorted by name and ID.
+- `listLandmarks()`: the 14-place manual origin catalog, sorted by name and ID.
 - `listDestinations()`: the full candidate destination catalog; membership does not imply a covered route.
 - `listDestinationsForOrigin(landmarkId)`: includes complete and explicitly source-based options. Circuit has five destinations; One Ayala has Circuit. Pass `false` as the second argument for complete guidance only, which currently yields none.
 - `getDatasetMetadata()`: installed dataset version and source notes.
@@ -60,12 +60,12 @@ The issue `boarding-coordinates-unavailable` alone does not block a ready manual
 
 ## Current expected outcomes (not executed tests)
 
-- All 15 places appear in both catalogs with stable IDs, null runtime coordinates, and null ML labels on landmarks.
+- All 14 places appear in both catalogs with stable IDs, null runtime coordinates, and null ML labels on landmarks.
 - Circuit to One Ayala and One Ayala to Circuit return `source-based` by default. Circuit to SM Makati, Glorietta, Landmark, and Greenbelt returns source-based bus-plus-walk suggestions.
 - Disabling source-based fallback returns `incomplete-guidance` for those combinations.
 - Uncovered pairs such as RCBC Plaza to Power Plant Mall return `no-routes`.
 - Same-ID selections return `already-at-destination` after validating both IDs.
 - Invalid IDs return their respective unsupported status.
-- Dataset metadata is version 2; schema is version 3.
+- Dataset metadata is version 3; schema is version 3.
 
 See [web recommendations](./data/web-recommendations.md) for the six bundled suggestions and presentation requirements. Refer to the deferred verification checklist before Android demonstration.

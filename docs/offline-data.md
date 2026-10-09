@@ -1,14 +1,14 @@
 # Offline data branch
 
-Schema version: 3. Bundled dataset version: 2.
+Schema version: 3. Bundled dataset version: 3.
 
-The Android database now bundles the 15-place Makati catalog and two published directional Circuit/One Ayala bus legs. Manual selection and lookup work without a model, network request, or map. The current bus journeys remain incomplete guidance: exact boarding access and final pedestrian instructions have not been established. No ready recommendation is claimed for the current dataset.
+The Android database now bundles the 14-place Makati catalog and two published directional Circuit/One Ayala bus legs. Manual selection and lookup work without a model, network request, or map. The current bus journeys remain incomplete guidance: exact boarding access and final pedestrian instructions have not been established. No ready recommendation is claimed for the current dataset.
 
-The user authorized web-sourced suggestions for remote development. Dataset 2 adds four explicit bus-plus-walk variants, for six recommendation records using the same two vehicle legs. These return `source-based` with sources and limitations; complete `available` guidance remains separate. See [web-recommendations.md](./data/web-recommendations.md).
+The user authorized web-sourced suggestions for remote development. Dataset 3 adds four explicit bus-plus-walk variants, for six recommendation records using the same two vehicle legs. These return `source-based` with sources and limitations; complete `available` guidance remains separate. See [web-recommendations.md](./data/web-recommendations.md).
 
 ## Implementation
 
-- `src/database/data/pilot-dataset.ts`: all 15 stable place IDs, nullable unmapped labels, named points, published legs, evidence, and pending relationships.
+- `src/database/data/pilot-dataset.ts`: all 14 stable place IDs, nullable unmapped labels, named points, published legs, evidence, and pending relationships.
 - `src/database/seed.ts`: versioned transactional replacement of bundled reference data.
 - `src/database/validate-dataset.ts`: validation of IDs, coordinates, labels, evidence, dates, and relationship integrity before replacement.
 - `src/database/schema.ts`: initial schema and version 2/3 migrations.
@@ -23,7 +23,7 @@ Existing screens do not import the database yet. No screens, dependencies, nativ
 
 ## Bundled data and evidence
 
-The catalog retains all 15 user-supplied places. Display names use The Landmark Makati and Power Plant Mall; IDs remain stable. Catalog membership does not guarantee transportation coverage.
+The catalog retains all 14 user-supplied places. Display names use The Landmark Makati and Power Plant Mall; IDs remain stable. Catalog membership does not guarantee transportation coverage.
 
 The two named published legs and four explicit onward walking variants are bundled. The variants use separately sourced mall connections and do not represent extra bus services or direct mall drop-offs. Conflicting, historical, and unsupported route leads remain in the worksheets. The [audit](./data/verification-report.md) explains the evidence; inclusion as a suggestion does not change its verification verdict.
 
@@ -61,4 +61,4 @@ The first seed deliberately preserves incomplete states instead of importing all
 
 ## Verification status
 
-Checks resumed: TypeScript, lint, and 11 isolated Node SQLite/domain checks pass. Pre-existing CSS declarations and a template web hydration lint issue were fixed. Native Expo SQLite and physical Android airplane-mode verification remain outstanding. See [offline-data-verification.md](./offline-data-verification.md) for results and [branch-integration.md](./branch-integration.md) for the team handoff. Nothing was committed or pushed.
+Checks resumed: TypeScript, lint, and 12 isolated Node SQLite/domain checks pass, including removal of the retired place from an installed dataset. Pre-existing CSS declarations and a template web hydration lint issue were fixed. Native Expo SQLite and physical Android airplane-mode verification remain outstanding. See [offline-data-verification.md](./offline-data-verification.md) for results and [branch-integration.md](./branch-integration.md) for the team handoff.
