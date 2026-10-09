@@ -33,7 +33,6 @@ QUERIES = {
     "avida_towers_makati_southpoint": "Avida Towers Makati Southpoint",
     "ayala_malls_circuit": "Ayala Malls Circuit, Makati",
     "st_john_bosco_parish": "St. John Bosco Parish, Makati",
-    "manila_premiere_wines": "Manila Premiere Wines, Makati",
     "rcbc_plaza": "RCBC Plaza, Makati",
     "sm_makati": "SM Makati",
     "the_landmark_makati": "The Landmark Makati",

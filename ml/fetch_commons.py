@@ -34,7 +34,6 @@ SOURCES = {
     "ayala_malls_circuit": (["Category:Ayala Malls Circuit"], ["Ayala Malls Circuit"]),
     "st_john_bosco_parish": (["Category:Saint John Bosco Parish Church (Pio del Pilar, Makati City)",
                               "Category:Don Bosco Church (San Lorenzo, Makati City)"], ["Saint John Bosco Parish Makati"]),
-    "manila_premiere_wines": ([], ["Manila Premiere Wines"]),
     "rcbc_plaza": (["Category:RCBC Plaza"], ["RCBC Plaza Makati"]),
     "sm_makati": (["Category:SM Makati"], []),
     "the_landmark_makati": (["Category:The Landmark (Ayala Center)"], ["The Landmark Makati"]),

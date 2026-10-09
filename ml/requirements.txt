@@ -1,3 +1,4 @@
 tensorflow[and-cuda]>=2.18,<2.21  # [and-cuda] bundles CUDA 12 libs for GPU training; plain tensorflow works on CPU
 pillow>=10
 numpy>=1.26
+yt-dlp>=2026.8  # fetch_video.py only; needs ffmpeg and node on PATH
