@@ -1,2 +1,12 @@
+ayala_center
 ayala_malls_circuit
+ayala_museum
+glorietta
 greenbelt
+makati_city_hall
+powerplant_mall
+rcbc_plaza
+salcedo_weekend_market
+sm_makati
+st_john_bosco_parish
+the_landmark_makati

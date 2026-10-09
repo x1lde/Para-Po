@@ -94,7 +94,8 @@ center_crop = tf.keras.layers.CenterCrop(IMG_SIZE, IMG_SIZE)
 def make_ds(x, y, training, batch=8):
     ds = tf.data.Dataset.from_tensor_slices((tf.cast(x, tf.float32), y))
     if training:
-        ds = ds.shuffle(len(x)).repeat(8)  # 8 augmented passes per epoch
+        passes = max(1, 160 // len(x))  # small datasets get several augmented passes per epoch
+        ds = ds.shuffle(len(x)).repeat(passes)
         ds = ds.batch(batch).map(lambda a, b: (augment(a, training=True), b))
     else:
         ds = ds.batch(batch).map(lambda a, b: (center_crop(a), b))
@@ -114,19 +115,21 @@ def build_model(num_classes):
     return tf.keras.Model(inputs, outputs), base
 
 
-def train(model, base, train_ds, val_ds, args):
+def train(model, base, train_ds, val_ds, class_weight, args):
     stop = lambda: tf.keras.callbacks.EarlyStopping(  # noqa: E731
         monitor="val_loss", patience=8, restore_best_weights=True
     )
     model.compile(optimizer=tf.keras.optimizers.Adam(1e-3), loss="sparse_categorical_crossentropy", metrics=["accuracy"])
-    model.fit(train_ds, validation_data=val_ds, epochs=args.head_epochs, callbacks=[stop()], verbose=2)
+    model.fit(train_ds, validation_data=val_ds, epochs=args.head_epochs, callbacks=[stop()],
+              class_weight=class_weight, verbose=2)
 
     # Fine-tune the last blocks; BatchNorm stays frozen because base runs with training=False.
     base.trainable = True
     for layer in base.layers[:-30]:
         layer.trainable = False
     model.compile(optimizer=tf.keras.optimizers.Adam(1e-5), loss="sparse_categorical_crossentropy", metrics=["accuracy"])
-    model.fit(train_ds, validation_data=val_ds, epochs=args.finetune_epochs, callbacks=[stop()], verbose=2)
+    model.fit(train_ds, validation_data=val_ds, epochs=args.finetune_epochs, callbacks=[stop()],
+              class_weight=class_weight, verbose=2)
 
 
 def to_tflite(model, path):
@@ -160,7 +163,9 @@ def main():
 
     xtr, ytr, xva, yva = split(by_class, labels, args.val_fraction, args.seed)
     model, base = build_model(len(labels))
-    train(model, base, make_ds(xtr, ytr, True), make_ds(xva, yva, False), args)
+    counts = np.bincount(ytr, minlength=len(labels))
+    class_weight = {i: len(ytr) / (len(labels) * c) for i, c in enumerate(counts)}  # balance rare landmarks
+    train(model, base, make_ds(xtr, ytr, True), make_ds(xva, yva, False), class_weight, args)
 
     tflite_path = out / "landmark_model.tflite"
     to_tflite(model, tflite_path)

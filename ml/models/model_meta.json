@@ -18,20 +18,29 @@
     "type": "softmax"
   },
   "labels": [
+    "ayala_center",
     "ayala_malls_circuit",
-    "greenbelt"
+    "ayala_museum",
+    "glorietta",
+    "greenbelt",
+    "makati_city_hall",
+    "powerplant_mall",
+    "rcbc_plaza",
+    "salcedo_weekend_market",
+    "sm_makati",
+    "st_john_bosco_parish",
+    "the_landmark_makati"
   ],
   "confidence_threshold": 0.7,
   "skipped_classes": {
-    "glorietta": 1,
-    "ayala_center": 2
+    "one_ayala": 4
   },
   "metrics": {
-    "train_images": 18,
-    "val_images": 4,
-    "val_accuracy": 0.75,
-    "val_confident_fraction": 0.75,
-    "val_accuracy_when_confident": 0.6666666666666666,
-    "keras_tflite_max_abs_diff": 0.02192533016204834
+    "train_images": 169,
+    "val_images": 43,
+    "val_accuracy": 0.7906976744186046,
+    "val_confident_fraction": 0.627906976744186,
+    "val_accuracy_when_confident": 1.0,
+    "keras_tflite_max_abs_diff": 0.12097856402397156
   }
 }
