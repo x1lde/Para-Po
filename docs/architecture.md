@@ -13,10 +13,10 @@ Para-Po is an offline-first public transportation identifier MVP. This scaffold 
 | `src/features/recognition/services/` | Future TensorFlow Lite model loading, input preparation, inference, and result mapping. |
 | `src/features/location/services/` | Future Expo Location permission handling, position retrieval, and location subscriptions. |
 | `src/features/transport/components/` | Future transport information cards, lists, and details. |
-| `src/features/transport/services/` | Future transport lookup and domain logic using locally available data. |
+| `src/features/transport/services/` | Offline transport lookup and explicit guidance completeness checks. |
 | `src/features/maps/components/` | Future MapLibre map presentation, markers, and overlays. |
-| `src/database/` | Future Expo SQLite connection management, schema, and migrations. |
-| `src/database/repositories/` | Future typed database access for transport and other persisted data. Keep SQL and persistence details out of UI components. |
+| `src/database/` | Expo SQLite initialization, schema, migrations, dataset validation, and bundled catalog data. |
+| `src/database/repositories/` | Typed catalog and transport access. Keep SQL and persistence details out of UI components. |
 | `src/hooks/` | Shared React hooks; retain the existing theme and color scheme hooks. Keep feature-specific hooks with their feature when needed. |
 | `src/constants/` | Shared constants, including the existing theme definitions. |
 | `src/types/` | Types shared across multiple features. Feature-specific types belong beside their feature; preserve the existing feature `types.ts` files. |
@@ -45,12 +45,14 @@ Start each branch from the team's agreed integration branch. Keep changes focuse
 
 ## Integration conventions
 
+The concrete handoff is in [branch-integration.md](./branch-integration.md), including ownership, UI wiring, source-based presentation, and cross-branch verification.
+
 - Preserve the strict TypeScript configuration and existing aliases: `@/*` resolves to `src/*`; `@/assets/*` resolves to `assets/*`.
 - Keep feature-specific types and behavior within the feature. Move contracts to `src/types/` only when multiple features need them.
 - UI components call feature services or hooks; transport services use database repositories; repositories own persistence details.
 - Recognition outputs should identify a class or candidate that transport services can resolve against verified local data. Do not invent route details when a match is unavailable.
 - Keep database access and inference work away from rendering code. Design future implementations for mobile performance and supported platforms.
 - Offline recognition and transport lookup should use bundled or persisted resources. Location and map availability must be handled explicitly; an offline-first application does not imply offline map coverage without real map resources.
-- This scaffold implements no screens, services, models, datasets, schema, or transport routes. Intended technologies do not imply that every dependency is already installed or configured.
+- Offline-data bundles a 15-place catalog and six source-based suggestions using two published vehicle legs plus four walking variants. Evidence and missing details stay explicit. Nullable labels and coordinates allow manual use without ML or guessed points. See [offline-data.md](./offline-data.md) for schema 3, dataset 2, and UI handoff; complete guidance remains a separate result standard. Screens, inference, GPS, and maps belong to their branches.
 - Before future Expo, EAS, or React Native API changes, follow `AGENTS.md` and consult the documentation matching the installed Expo SDK. Add dependencies separately using Expo-compatible installation commands.
 - Run TypeScript and lint checks before merging each branch, and distinguish existing failures from regressions introduced by that branch.
