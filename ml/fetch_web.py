@@ -116,6 +116,7 @@ def main():
     ap.add_argument("--target", type=int, default=250, help="candidates to keep per landmark")
     ap.add_argument("--labels", default=",".join(NAMES))
     ap.add_argument("--extra", action="store_true", help="search the alternate names in EXTRA instead")
+    ap.add_argument("--queries", help="'|'-separated custom queries (use with a single --labels)")
     args = ap.parse_args()
     out = Path(args.out).expanduser()
     out.mkdir(parents=True, exist_ok=True)
@@ -135,7 +136,8 @@ def main():
         d.mkdir(exist_ok=True)
         have = len(list(d.glob("*.jpg")))
         cands, urls = [], set(known)
-        queries = ([q + v for q in EXTRA.get(label, []) for v in ("", " photo", " night")] if args.extra
+        queries = (args.queries.split("|") if args.queries else
+                   [q + v for q in EXTRA.get(label, []) for v in ("", " photo", " night")] if args.extra
                    else [NAMES[label] + v for v in VARIANTS])
         for query in queries:
             for first in range(0, 140, 35):

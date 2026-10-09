@@ -34,20 +34,20 @@ No TensorFlow release supports CUDA 13 yet (2.21 still requires `cu12` wheels), 
 | greenbelt | 205 | 83% |
 | ayala_malls_circuit | 132 | 88% |
 | salcedo_weekend_market | 113 | 91% |
-| makati_city_hall | 108 | 95% |
-| glorietta | 96 | 79% |
-| rcbc_plaza | 94 | 84% |
-| ayala_museum | 69 | 86% |
-| st_john_bosco_parish | 68 | 93% |
-| one_ayala | 56 | 64% |
-| powerplant_mall | 45 | 89% |
+| makati_city_hall | 108 | 100% |
+| glorietta | 96 | 84% |
+| rcbc_plaza | 94 | 79% |
+| ayala_museum | 69 | 79% |
+| st_john_bosco_parish | 68 | 86% |
+| one_ayala | 56 | 73% |
+| powerplant_mall | 45 | 78% |
 | avida_towers_makati_southpoint | 40 | 100% |
-| the_landmark_makati | 33 | 86% |
-| sm_makati | 27 | 80% |
+| the_landmark_makati | 38 | 88% |
+| sm_makati | 40 | 62% |
 | ayala_center | 23 | 100% |
-| manila_premiere_wines | 0 | no usable photos online (only bottles and other wine shops) |
+| manila_premiere_wines | 2 | skipped: needs ≥5. Store is in the basement of Cacho Gonzales Bldg, 101 Aguirre St, Legaspi Village; only 2 photos online can be confirmed to show that building |
 
-1,109 images in total. The recall numbers for the smallest classes come from only 5–8 validation photos each, so treat them as rough.
+1,129 images in total. SM Makati includes 13 verified interior shots: the SM Store sections, food court and supermarket. No Cyberzone photo online could be confirmed as the SM Makati branch, because Cyberzone exists in every SM mall. The recall numbers for the smallest classes come from only 5–8 validation photos each, so treat them as rough.
 
 ## Results (held-out 20%: 886 train / 223 val, TFLite model)
 
@@ -55,7 +55,8 @@ No TensorFlow release supports CUDA 13 yet (2.21 still requires `cu12` wheels), 
 |---|---|---|---|---|
 | α=1.0, 216 images (previous) | 79% | n/a | 63% | 100% (only 27 photos) |
 | α=1.0, 1,109 images, CPU | 81% | 92% | 71% | 92% |
-| **α=1.4, 1,109 images, GPU (shipped)** | **87%** | **96%** | **70%** | **97%** |
+| α=1.4, 1,109 images, GPU | 87% | 96% | 70% | 97% |
+| **α=1.4, 1,129 images, GPU (shipped)** | **85%** | **94%** | **68%** | **97%** |
 
 ## Outputs (`ml/models/`)
 
