@@ -20,6 +20,8 @@ const PREFERRED_DELEGATES: TensorflowModelDelegate[][] =
   Platform.OS === 'ios' ? [['core-ml'], []] : Platform.OS === 'android' ? [['android-gpu'], []] : [[]];
 
 let modelPromise: Promise<TfliteModel> | null = null;
+let useCpuOnly = false;
+let recognitionQueue: Promise<void> = Promise.resolve();
 
 function assertModelShape(model: TfliteModel) {
   const input = model.inputs[0];
@@ -47,7 +49,7 @@ function assertLabelsMatchDataset() {
 async function loadModel(): Promise<TfliteModel> {
   assertLabelsMatchDataset();
   let lastError: unknown;
-  for (const delegates of PREFERRED_DELEGATES) {
+  for (const delegates of useCpuOnly ? [[]] : PREFERRED_DELEGATES) {
     try {
       const model = await loadTensorflowModel(LANDMARK_MODEL_ASSET, delegates);
       assertModelShape(model);
@@ -77,7 +79,15 @@ async function toCandidates(scores: LabelScore[]): Promise<RecognitionCandidate[
 }
 
 /** Recognize the landmark in a photo (file URI, e.g. from expo-camera takePictureAsync). */
-export async function recognizeLandmark(photoUri: string): Promise<RecognitionResult> {
+export function recognizeLandmark(photoUri: string): Promise<RecognitionResult> {
+  // A closed scanner can leave an invocation running while another opens.
+  // A shared TFLite interpreter must never receive concurrent input writes.
+  const operation = recognitionQueue.then(() => recognizePhoto(photoUri));
+  recognitionQueue = operation.then(() => undefined, () => undefined);
+  return operation;
+}
+
+async function recognizePhoto(photoUri: string): Promise<RecognitionResult> {
   let model: TfliteModel;
   try {
     model = await loadLandmarkModel();
@@ -97,7 +107,18 @@ export async function recognizeLandmark(photoUri: string): Promise<RecognitionRe
     const [output] = await model.run([input.buffer as ArrayBuffer]);
     scores = new Float32Array(output);
   } catch (error) {
-    return { status: 'unavailable', reason: 'inference-failed', error };
+    if (!model.delegates?.length) return { status: 'unavailable', reason: 'inference-failed', error };
+    // Some Android GPUs load a delegate successfully but fail on invocation.
+    // Retry this same photo on CPU and retain CPU for the rest of the session.
+    useCpuOnly = true;
+    modelPromise = null;
+    try {
+      model = await loadLandmarkModel();
+      const [output] = await model.run([input.buffer as ArrayBuffer]);
+      scores = new Float32Array(output);
+    } catch (cpuError) {
+      return { status: 'unavailable', reason: 'inference-failed', error: cpuError };
+    }
   }
 
   let decision: ReturnType<typeof interpretScores>;

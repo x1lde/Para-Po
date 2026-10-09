@@ -55,7 +55,7 @@ function scoresFor(entries) {
 
 /** Native mocks: image manipulator (records crops/releases), TFLite (scripted), repository (dataset-backed). */
 function serviceFixture({ scores = scoresFor({ greenbelt: 0.97 }), failDelegates = [], imageSize = [4032, 3024],
-  badShape = false, runError = null, lookupError = null } = {}) {
+  badShape = false, runError = null, lookupError = null, gpuRunError = null, runGate = null } = {}) {
   const log = { loads: [], crops: [], resizes: [], released: 0, runs: [] };
   const size = meta.input.shape[1];
   const rgba = Buffer.alloc(size * size * 4);
@@ -83,11 +83,14 @@ function serviceFixture({ scores = scoresFor({ greenbelt: 0.97 }), failDelegates
         log.loads.push(delegates);
         if (delegates.some((delegate) => failDelegates.includes(delegate))) throw new Error('delegate unavailable');
         return {
+          delegates,
           inputs: [{ name: 'image', dataType: 'float32', shape: badShape ? [1, 160, 160, 3] : [1, size, size, 3] }],
           outputs: [{ name: 'probs', dataType: 'float32', shape: [1, LABELS.length] }],
           run: async ([input]) => {
+            if (delegates.length && gpuRunError) throw gpuRunError;
             if (runError) throw runError;
             log.runs.push(new Float32Array(input));
+            if (runGate) await runGate(log.runs.length);
             return [scores.buffer.slice(0)];
           },
         };
@@ -218,6 +221,32 @@ async function main() {
     assert.equal(tiny.log.released, 2, 'native image refs are released on failure');
   });
 
+  await check('GPU invocation failure retries the same photo on CPU and retains the CPU model', async () => {
+    const fixture = serviceFixture({ gpuRunError: new Error('TEST ONLY GPU invocation failed') });
+    const result = await fixture.service.recognizeLandmark('file:///photo.jpg');
+    assert.equal(result.status, 'recognized');
+    assert.deepEqual(fixture.log.loads, [['android-gpu'], []]);
+    assert.equal(fixture.log.crops.length, 1, 'preprocessing is reused for CPU retry');
+    assert.equal((await fixture.service.recognizeLandmark('file:///second.jpg')).status, 'recognized');
+    assert.equal(fixture.log.loads.length, 2, 'subsequent scans reuse CPU');
+  });
+  await check('overlapping scanner requests never invoke the shared interpreter concurrently', async () => {
+    let release;
+    let notify;
+    const gate = new Promise((resolve) => { release = resolve; });
+    const entered = new Promise((resolve) => { notify = resolve; });
+    const fixture = serviceFixture({ runGate: async (run) => { if (run === 1) { notify(); await gate; } } });
+    const first = fixture.service.recognizeLandmark('file:///first.jpg');
+    const second = fixture.service.recognizeLandmark('file:///second.jpg');
+    await entered;
+    assert.equal(fixture.log.runs.length, 1);
+    assert.equal(fixture.log.crops.length, 1, 'second photo waits for the first operation');
+    release();
+    const results = await Promise.all([first, second]);
+    assert(results.every((result) => result.status === 'recognized'));
+    assert.equal(fixture.log.runs.length, 2);
+    assert.equal(fixture.log.loads.length, 1);
+  });
   await check('malformed scores and database failures return recoverable results', async () => {
     const malformed = serviceFixture({ scores: new Float32Array(1) });
     assert.equal((await malformed.service.recognizeLandmark('file:///photo.jpg')).reason, 'inference-failed');
