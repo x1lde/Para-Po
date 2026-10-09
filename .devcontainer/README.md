@@ -12,4 +12,6 @@ For the browser preview, run `npm run web` and open forwarded port 8081. For a p
 
 Codespaces is Linux: iOS simulators, local laptop hardware scripts, desktop applications such as Antigravity, and Windows/WSL host extensions cannot be reproduced here. Standard Codespaces has no CUDA GPU; model training runs on CPU. VS Code may mark some desktop-only extensions unavailable in the browser. Package installers use current versions except the inventoried Vercel version and project lockfile; skills and Codex plugin payloads are local snapshots.
 
+Private account-synced skills can be transferred to `/workspaces/.para-po-private-skills.tar.gz`. Setup restores this archive on rebuild and links the skills to each assistant's skill directory. This file stays outside the repository.
+
 The `.devcontainer` files are a [repository dev container configuration](https://docs.github.com/en/codespaces/setting-up-your-project-for-codespaces/adding-a-dev-container-configuration/introduction-to-dev-containers), so future Codespaces receive the same setup.

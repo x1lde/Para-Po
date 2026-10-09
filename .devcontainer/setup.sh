@@ -4,6 +4,10 @@ cd "$(dirname "$0")/.."
 export PATH="$HOME/.local/bin:$PATH"
 mkdir -p "$HOME/.agents/skills" "$HOME/.codex/skills" "$HOME/.claude/skills" "$HOME/.gemini/skills" "$HOME/.local/bin"
 tar -xzf .devcontainer/skills.tar.gz -C "$HOME/.agents/skills"
+# Keep privately transferred skills outside the repository, across rebuilds.
+if [ -f /workspaces/.para-po-private-skills.tar.gz ]; then
+  tar -xzf /workspaces/.para-po-private-skills.tar.gz -C "$HOME/.agents/skills"
+fi
 for skill in "$HOME/.agents/skills"/*; do
   name="$(basename "$skill")"
   ln -sfn "$skill" "$HOME/.codex/skills/$name"
