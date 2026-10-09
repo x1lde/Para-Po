@@ -2,13 +2,23 @@
 
 Use these CSV files in a spreadsheet to collect Para-Po's offline reference data. All 15 user-supplied landmark names are retained. Destination rows are candidates based on the same names; they do not assert transportation coverage. Online research now supplies provisional coordinates and route/boarding leads where sources were available. Model labels and unknown details remain blank. Read [research.md](./research.md) for provenance, evidence status, conflicts, and remaining gaps.
 
-These files are documentation worksheets. The application does not import them, and they are not a verified dataset. The runtime seed remains empty in `src/database/seed.ts`.
+These files are documentation worksheets, not an automatic importer. Dataset version 1 now bundles the 15-place manual catalog and two scoped published bus legs with pending access flags. Research map candidates, conflicting routes, inferred complete journeys, and ML labels have not been promoted. See [offline-data.md](../offline-data.md) for the current runtime boundary.
+
+Latest update: [dataset 2](./web-recommendations.md) enables six source-based records, including four explicitly combined bus-plus-walk suggestions. Verification flags remain pending; sources and limitations must accompany the separate result status. This supersedes the version 1 storage-only boundary above.
 
 Use [destination-access.csv](./destination-access.csv) to review vehicle type, route ID, pickup, alighting, and remaining access together. Its hub-plus-walk combinations are research leads, not direct database routes. Every researched row keeps source links and a retrieval date separate from the blank field-verification date.
 
 Use [source-review.csv](./source-review.csv) for the follow-up claim-by-claim review, including primary-source evidence and conflicting reports. A supported gate or address alone does not verify a complete journey.
 
+The [remote verification report](./verification-report.md) audits every existing route and journey entry. [verification-audit.csv](./verification-audit.csv) is the current verdict register; [verification-sources.csv](./verification-sources.csv) records source URLs and retrieval limits. Remote published evidence is acceptable when it establishes the needed details; a physical ride is not mandatory. New verification columns in the route and journey worksheets are separate from their original research status and field-observation dates.
+
 ## Complete one journey first
+
+The [all-landmark options worksheet](./transportation-options.csv) now covers all 15 candidates with 17 selected option records. Read [coverage-review.md](./coverage-review.md) for the results and limits. It is a research companion, not an importer or a complete routing matrix.
+
+Start with the [Circuit to One Ayala journey packet](./first-journey.md). Published boarding and alighting instruction drafts are filled in its worksheet rows; the packet lists the precise observations still needed before verification and seed promotion.
+
+The [stop and access follow-up](./circuit-access-research.md) adds a rendered primary address, a mapped walking proposal, and [coordinate candidates](./circuit-coordinate-candidates.csv). Candidate coordinates are review references with explicit identity limits, not approved boarding points.
 
 Keep the full candidate catalog and fill verified journeys incrementally:
 
@@ -18,7 +28,7 @@ Keep the full candidate catalog and fill verified journeys incrementally:
 4. Record the observed or otherwise verified direct route in `routes.csv`: route/signboard name, vehicle type, direction, destination ID, and where the passenger gets off. Do not assume the reverse direction uses the same boarding point.
 5. Link that route to the boarding point in `route-boarding-points.csv`. `stop_order` is a nonnegative integer ordering eligible boarding stops for that directional route, not a departure time. Use 0 for the first recorded stop, then 1, 2, and so on. Each route/point pair and each route/order pair must be unique.
 6. Link the origin landmark to that boarding point in `landmark-boarding-points.csv`. Verify that the boarding location is accessible from the landmark; straight-line proximity alone does not establish access.
-7. Record source references and verification dates on every completed row. Change a row's research status to `verified` only after confirming the necessary fields and relationships. Keep the online retrieval date separate from the field-verification date. Use `YYYY-MM-DD` dates.
+7. Record source references and review dates on every completed row. Complete records can be supported by authoritative published or mapped evidence, documented observations, or both. Keep `verification_reviewed_on` separate from `verified_on` field-observation dates. Use the audit's explicit scope and verdict; do not promote a whole journey because only its vehicle leg is published-confirmed. Use `YYYY-MM-DD` dates.
 
 If a journey requires a transfer, leave it unsupported in this first direct-route implementation. If a destination is only nearby rather than served directly, document the alighting site and remaining access clearly; do not present it as a direct arrival without review.
 
@@ -51,7 +61,9 @@ Current vehicle types are `jeepney`, `bus`, and `e-bus`. Propose a type change e
 
 Review the worksheets first. Transfer only complete verified records and their required relationships into `bundledDataset`, preserving evidence in `sourceNotes` and these worksheets. Increase the dataset version when changing bundled data. Do not import all candidates blindly or change schema version for a data-only update.
 
-There is no CSV importer in this increment. The runtime format is a typed TypeScript object. Schema version 2 supports instructions through these mappings:
+Incomplete published vehicle facts can be stored for review only when their missing values and access/boarding flags remain explicit. The service returns these under `incomplete-guidance`; storing a scoped leg does not make its whole journey ready. Missing coordinates and ML labels are null in schema 3, allowing manual catalog use without guessed data. Coordinate availability affects GPS/maps, not otherwise complete manual guidance.
+
+There is no CSV importer in this increment. The runtime format is a typed TypeScript object. Schema version 3 retains the instruction mappings introduced in version 2:
 
 | Worksheet field | Runtime field |
 | --- | --- |

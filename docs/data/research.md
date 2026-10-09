@@ -1,8 +1,10 @@
 # Makati transport research
 
-Research date: 2026-10-09. This is an online-source collection for the 15 user-supplied candidates, not a field-verified dataset. No runtime seed has been changed.
+Research date: 2026-10-09. This is an online-source collection for the 15 user-supplied candidates, not a field-verified dataset. Later implementation now bundles their manual catalog and two published vehicle legs with incomplete guidance; see [offline-data.md](../offline-data.md). The broader researched journeys and coordinate candidates remain outside ready recommendations.
 
 ## What was collected
+
+Follow-up coverage now includes [17 selected options for all 15 candidates](./transportation-options.csv). [coverage-review.md](./coverage-review.md) records newer community corroboration, primary-source retrieval limits, and pedestrian connections. [first-journey.md](./first-journey.md) now accounts for each remaining Circuit-to-One-Ayala detail, including explicit unknowns for operator, curb, coordinates, and walking paths.
 
 - `landmarks.csv` and `destinations.csv` retain all 15 names. Thirteen have provisional site coordinates; Southpoint and Manila Premiere Wines have address leads only. Model classification labels remain blank.
 - `routes.csv` contains eleven directional or destination-specific research records, including one inferred parish journey and one historical electric-jeep record. IDs are application worksheet identifiers, not official route numbers.
@@ -14,13 +16,15 @@ This is selected journey coverage, not a complete table of every origin/destinat
 
 ## Evidence status
 
+This section describes original research provenance. For current verification verdicts on every route and journey, use [verification-report.md](./verification-report.md) and the appended verification columns. Credible remote sources can confirm a scoped claim without a physical ride; they do not fill unsupported coordinates or paths.
+
 | Status | Meaning |
 | --- | --- |
 | `source-reviewed` | Online evidence supports a location or journey lead. It does not establish current service, exact stopping legality, or field verification. |
 | `inferred` | A relationship was assembled from separately sourced facts rather than a directly confirmed journey. Review before use. |
 | `historical` | Older service information retained as a lead. Current operation and direction need confirmation. |
 | `unresolved` | The research did not establish a defensible route or exact location. Blank fields remain unknown. |
-| `verified` | Reserved for team-confirmed complete records. No collected row has this status. |
+| `verified` | Legacy label for complete reviewed records; evidence can be published, observed, or both. The current audit uses explicit scoped verdicts instead. |
 
 `researched_on` is the retrieval date; `verified_on` is intentionally blank. `evidence_kind` distinguishes news, community reports, search excerpts, and mapped places. Search indexing and crawl dates are not service verification dates. Where known, `source_published_on` records the article/report date.
 
@@ -54,7 +58,7 @@ Rows derived from Mapcarta cite their individual pages, which identify underlyin
 
 ### Follow-up source review
 
-The [claim review worksheet](./source-review.csv) records ten specific findings and their limits. `source-supported` there means the cited page explicitly supports that particular fact; it does not promote the whole journey to `verified`. All field-verification dates remain blank. There are still no substantiated loading-bay coordinates.
+The [claim review worksheet](./source-review.csv) records specific findings and their limits. `source-supported` there means the cited page explicitly supports that particular fact; it does not promote the whole journey to `verified`. All field-verification dates remain blank. There are still no substantiated loading-bay coordinates.
 
 New primary evidence includes the [IOM visitor directions](https://philippines.iom.int/sites/g/files/tmzbdl1651/files/documents/2024-04/mhc-location-map-and-route.pdf): indexed text identifies Makati Loop-Landmark at Gate 4 and a Landmark departure near Greenbelt 3. The PDF itself could not be fetched, so this is explicitly recorded as a search excerpt. It does not confirm the City Hall alighting point.
 
@@ -66,7 +70,7 @@ Two conflicts need resolution before seed promotion: [May rider reports](https:/
 
 The [museum's own visitor page](https://www.ayalamuseum.org/visit) confirms its Makati Avenue/De La Rosa address in Greenbelt Park. It does not establish a particular entrance, pedestrian path, or vehicle stop. The remaining Southpoint, parish, City Hall, Salcedo, Powerplant, and wine-shop journey gaps remain as described in their existing worksheet rows; no full journey has been newly certified.
 
-Confirm actual signboards, travel direction, legal boarding/alighting points, exact coordinates, remaining pedestrian access, and source dates. For recent P2P reports, confirm the current operator and service conditions. Preserve findings and evidence in the worksheets, set `verified_on` only after team verification, then promote reviewed records into the bundled seed.
+Confirm travel direction, boarding/alighting locations, sufficiently precise coordinates, remaining access, and source dates using reliable published or observed evidence. For P2P reports, retain uncertainty about operator and service conditions where unresolved. Preserve findings in the worksheets, record desk audits in `verification_reviewed_on`, and use `verified_on` only for actual field observations. Promote only complete reviewed records into the bundled seed.
 
 Do not import `destination-access.csv` as routes: hub-plus-walk rows target places different from the bus route's actual terminal. Schema version 2 can now store reviewed boarding, alighting, and walking instructions; see [offline-data.md](../offline-data.md). That capability does not automatically approve or import research rows.
 

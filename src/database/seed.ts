@@ -1,4 +1,6 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
+import { pilotDataset } from './data/pilot-dataset';
+import { validateDataset } from './validate-dataset';
 
 import type {
   BoardingPoint,
@@ -20,23 +22,11 @@ export interface TransportDataset {
   landmarkBoardingPoints: readonly LandmarkBoardingPoint[];
 }
 
-// Version 0 is intentionally empty. Add only verified pilot data, then bump version.
-export const bundledDataset: TransportDataset = {
-  version: 0,
-  sourceNotes: 'No verified pilot dataset supplied yet.',
-  landmarks: [],
-  destinations: [],
-  boardingPoints: [],
-  routes: [],
-  routeBoardingPoints: [],
-  landmarkBoardingPoints: [],
-};
+export const bundledDataset: TransportDataset = pilotDataset;
 
-/** Caller must run this inside a transaction with foreign keys enabled. */
+/** Caller must use a transaction and enforce/check foreign keys before commit. */
 export async function seedDatabase(db: SQLiteDatabase, dataset: TransportDataset) {
-  if (!Number.isSafeInteger(dataset.version) || dataset.version < 0) {
-    throw new Error('Dataset version must be a nonnegative integer.');
-  }
+  validateDataset(dataset);
   const stored = await db.getFirstAsync<{ version: number }>(
     'SELECT version FROM dataset_metadata WHERE id = 1'
   );
@@ -77,24 +67,26 @@ export async function seedDatabase(db: SQLiteDatabase, dataset: TransportDataset
     await db.runAsync(
       `INSERT INTO transportation_routes
        (id, name, transportation_type, destination_id, alighting_location,
-        alighting_instructions, destination_walking_instructions)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        alighting_instructions, destination_walking_instructions,
+        evidence_status, source_reference, reviewed_on, limitations)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       route.id, route.name, route.transportationType, route.destinationId,
-      route.alightingLocation, route.alightingInstructions, route.destinationWalkingInstructions
+      route.alightingLocation, route.alightingInstructions, route.destinationWalkingInstructions,
+      route.evidenceStatus, route.sourceReference, route.reviewedOn, route.limitations
     );
   }
   for (const point of dataset.routeBoardingPoints) {
     await db.runAsync(
       `INSERT INTO route_boarding_points
-       (route_id, boarding_point_id, stop_order, boarding_instructions) VALUES (?, ?, ?, ?)`,
-      point.routeId, point.boardingPointId, point.stopOrder, point.boardingInstructions
+       (route_id, boarding_point_id, stop_order, boarding_instructions, boarding_verified) VALUES (?, ?, ?, ?, ?)`,
+      point.routeId, point.boardingPointId, point.stopOrder, point.boardingInstructions, point.boardingVerified ? 1 : 0
     );
   }
   for (const point of dataset.landmarkBoardingPoints) {
     await db.runAsync(
       `INSERT INTO landmark_boarding_points
-       (landmark_id, boarding_point_id, walking_instructions) VALUES (?, ?, ?)`,
-      point.landmarkId, point.boardingPointId, point.walkingInstructions
+       (landmark_id, boarding_point_id, walking_instructions, access_verified) VALUES (?, ?, ?, ?)`,
+      point.landmarkId, point.boardingPointId, point.walkingInstructions, point.accessVerified ? 1 : 0
     );
   }
   await db.runAsync(

@@ -1,4 +1,4 @@
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = 3;
 
 // Static SQL only. Bind values from data or users in runAsync/getAllAsync.
 export const INITIAL_SCHEMA = `
@@ -56,4 +56,48 @@ ALTER TABLE transportation_routes ADD COLUMN alighting_instructions TEXT;
 ALTER TABLE transportation_routes ADD COLUMN destination_walking_instructions TEXT;
 ALTER TABLE route_boarding_points ADD COLUMN boarding_instructions TEXT;
 ALTER TABLE landmark_boarding_points ADD COLUMN walking_instructions TEXT;
+`;
+
+// SQLite's documented create/copy/drop/rename migration. The private connection
+// temporarily disables foreign keys outside its transaction, then checks them
+// before committing and enables enforcement again before returning to callers.
+export const MANUAL_CATALOG_MIGRATION = `
+CREATE TABLE landmarks_v3 (
+  id TEXT PRIMARY KEY NOT NULL,
+  name TEXT NOT NULL CHECK (length(trim(name)) > 0),
+  latitude REAL CHECK (latitude BETWEEN -90 AND 90),
+  longitude REAL CHECK (longitude BETWEEN -180 AND 180),
+  classification_label TEXT UNIQUE CHECK (classification_label IS NULL OR length(trim(classification_label)) > 0),
+  CHECK ((latitude IS NULL AND longitude IS NULL) OR (latitude IS NOT NULL AND longitude IS NOT NULL))
+);
+INSERT INTO landmarks_v3 SELECT id, name, latitude, longitude, classification_label FROM landmarks;
+DROP TABLE landmarks;
+ALTER TABLE landmarks_v3 RENAME TO landmarks;
+CREATE TABLE destinations_v3 (
+  id TEXT PRIMARY KEY NOT NULL,
+  name TEXT NOT NULL CHECK (length(trim(name)) > 0),
+  latitude REAL CHECK (latitude BETWEEN -90 AND 90),
+  longitude REAL CHECK (longitude BETWEEN -180 AND 180),
+  CHECK ((latitude IS NULL AND longitude IS NULL) OR (latitude IS NOT NULL AND longitude IS NOT NULL))
+);
+INSERT INTO destinations_v3 SELECT id, name, latitude, longitude FROM destinations;
+DROP TABLE destinations;
+ALTER TABLE destinations_v3 RENAME TO destinations;
+CREATE TABLE boarding_points_v3 (
+  id TEXT PRIMARY KEY NOT NULL,
+  name TEXT NOT NULL CHECK (length(trim(name)) > 0),
+  latitude REAL CHECK (latitude BETWEEN -90 AND 90),
+  longitude REAL CHECK (longitude BETWEEN -180 AND 180),
+  CHECK ((latitude IS NULL AND longitude IS NULL) OR (latitude IS NOT NULL AND longitude IS NOT NULL))
+);
+INSERT INTO boarding_points_v3 SELECT id, name, latitude, longitude FROM boarding_points;
+DROP TABLE boarding_points;
+ALTER TABLE boarding_points_v3 RENAME TO boarding_points;
+ALTER TABLE transportation_routes ADD COLUMN evidence_status TEXT NOT NULL DEFAULT 'pending'
+  CHECK (evidence_status IN ('pending', 'published-confirmed', 'verified'));
+ALTER TABLE transportation_routes ADD COLUMN source_reference TEXT;
+ALTER TABLE transportation_routes ADD COLUMN reviewed_on TEXT;
+ALTER TABLE transportation_routes ADD COLUMN limitations TEXT;
+ALTER TABLE route_boarding_points ADD COLUMN boarding_verified INTEGER NOT NULL DEFAULT 0 CHECK (boarding_verified IN (0, 1));
+ALTER TABLE landmark_boarding_points ADD COLUMN access_verified INTEGER NOT NULL DEFAULT 0 CHECK (access_verified IN (0, 1));
 `;

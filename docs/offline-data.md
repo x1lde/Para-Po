@@ -1,96 +1,64 @@
-# Offline data foundation
+# Offline data branch
 
-This increment provides SQLite initialization, typed reference data, bundled seed support, and a deterministic landmark-to-destination lookup. It is not connected to a screen yet. No real or mock transportation dataset is included.
+Schema version: 3. Bundled dataset version: 2.
 
-## Files and entry points
+The Android database now bundles the 15-place Makati catalog and two published directional Circuit/One Ayala bus legs. Manual selection and lookup work without a model, network request, or map. The current bus journeys remain incomplete guidance: exact boarding access and final pedestrian instructions have not been established. No ready recommendation is claimed for the current dataset.
 
-- `src/features/transport/types.ts`: landmark, destination, boarding point, route, and lookup result contracts.
-- `src/database/schema.ts`: initial schema, constraints, and additive version 2 instruction migration.
-- `src/database/seed.ts`: the complete bundled dataset and transactional seed writes.
-- `src/database/client.ts`: lazy `getDatabase()` initialization, cached across concurrent callers. Failed initialization can be retried.
-- `src/database/repositories/transport-repository.ts`: `listLandmarks()`, `listDestinations()`, individual lookups, and origin/destination-filtered boarding options.
-- `src/features/transport/services/transport-service.ts`: `lookupTransportation(landmarkId, destinationId)`.
+The user authorized web-sourced suggestions for remote development. Dataset 2 adds four explicit bus-plus-walk variants, for six recommendation records using the same two vehicle legs. These return `source-based` with sources and limitations; complete `available` guidance remains separate. See [web-recommendations.md](./data/web-recommendations.md).
 
-The SQLite implementation follows the [Expo SDK 57 SQLite documentation](https://docs.expo.dev/versions/v57.0.0/sdk/sqlite/). Initialization enables WAL and foreign keys before a transaction on the same connection. The connection is returned only after schema creation and seeding complete. SQL values are parameterized; only static schema statements use `execAsync`.
+## Implementation
 
-The target for device verification is Android. Web SQLite setup is outside this increment. Existing screens do not import the new database module, so their current startup behavior is preserved.
+- `src/database/data/pilot-dataset.ts`: all 15 stable place IDs, nullable unmapped labels, named points, published legs, evidence, and pending relationships.
+- `src/database/seed.ts`: versioned transactional replacement of bundled reference data.
+- `src/database/validate-dataset.ts`: validation of IDs, coordinates, labels, evidence, dates, and relationship integrity before replacement.
+- `src/database/schema.ts`: initial schema and version 2/3 migrations.
+- `src/database/client.ts`: lazy cached initialization; retry after failure.
+- `src/database/repositories/transport-repository.ts`: catalog queries, origin/destination lookup, ready destination filtering, and dataset metadata.
+- `src/features/transport/services/guidance-service.ts`: explicit completeness checks.
+- `src/features/transport/services/transport-service.ts`: deterministic lookup statuses.
+- [UI handoff](./offline-data-handoff.md): API usage, result handling, and current expected outcomes.
+- [Verification checklist](./offline-data-verification.md): checks deferred at the user's request.
 
-## Data relationships
+Existing screens do not import the database yet. No screens, dependencies, native configuration, GPS permission code, model integration, or map rendering were added in this branch increment.
 
-- A destination is a supported selectable endpoint with verified coordinates.
-- Each route represents one direction toward one destination. Give opposite directions distinct route identifiers.
-- `route_boarding_points` links a route to its eligible boarding points in stop order. Do not include a terminal where passengers cannot board toward that route's destination.
-- `landmark_boarding_points` explicitly links a landmark to boarding locations verified as accessible from it. Coordinates alone do not establish accessibility.
-- The lookup returns only routes serving the destination and boarding points associated with the selected landmark. Results have a stable display order; they are not ranked by proximity.
-- There is no transfer planning, walking routing, fare estimate, schedule, live vehicle data, or generated route information.
+## Bundled data and evidence
 
-SQLite enforces foreign keys, unique model labels, coordinate ranges, allowed transport types, and unique stop ordering per route. Verification of real-world route direction and boarding suitability still requires the team to review its sources.
+The catalog retains all 15 user-supplied places. Display names use The Landmark Makati and Power Plant Mall; IDs remain stable. Catalog membership does not guarantee transportation coverage.
 
-## Adding the pilot dataset
+The two named published legs and four explicit onward walking variants are bundled. The variants use separately sourced mall connections and do not represent extra bus services or direct mall drop-offs. Conflicting, historical, and unsupported route leads remain in the worksheets. The [audit](./data/verification-report.md) explains the evidence; inclusion as a suggestion does not change its verification verdict.
 
-The team supplied the following 15 candidate landmark names. The [pilot data worksheets](./data/README.md) now include sourced online location and transportation leads; see [research notes](./data/research.md) for uncertainty and gaps. Model labels and field-verified journey data have not been supplied, and the runtime seed remains empty. Keep all 15 candidates and add verified journey coverage incrementally.
+Every place and boarding-point coordinate in the runtime dataset is currently an explicit null pair. Provisional site points and ambiguous provider stops remain in documentation. This prevents candidate points from becoming distance-ranking or destination-map inputs. Model labels are null rather than fabricated; manual lookup uses place IDs.
 
-- Ayala Center
-- Avida Towers Makati Southpoint
-- Ayala Malls Circuit
-- St. John Bosco Parish
-- Manila Premiere Wines
-- RCBC Plaza
-- SM Makati
-- The Landmark Makati (provided as "The Lankdmark Makati"; confirm the final display name)
-- Greenbelt by Ayala
-- Glorietta by Ayala
-- Powerplant Mall
-- Makati City Hall
-- Ayala Museum
-- One Ayala by Ayala Malls
-- Salcedo Weekend Market
+Each route carries `evidenceStatus`, `sourceReference`, `reviewedOn`, and `limitations`. `published-confirmed` describes the named directional vehicle leg, not complete access, live operation, or guaranteed service conditions. Review dates are desk-review dates.
 
-Do not assume that a candidate landmark is also a supported destination. Record which entrances or exact sites the coordinates identify, especially for complexes that overlap. Verify each route's travel direction and boarding suitability for the chosen destination.
+A route/point relationship has `boardingVerified`; a landmark/point relationship has `accessVerified`. These mean reviewed evidence establishes the relevant guidance, not necessarily that a teammate took a physical ride. Both are false for the currently bundled records.
 
-1. Select the pilot corridor and collect verified landmarks, destinations, directional routes, and boarding points.
-2. Record source references, verification dates, and relevant limitations in `sourceNotes` and supporting documentation. Obtain boarding coordinates and route direction from actual evidence.
-3. Agree on stable landmark identifiers with the ML branch. `classificationLabel` must match the model's label mapping; the application passes the corresponding landmark ID to the transport service.
-4. Populate `bundledDataset` in `src/database/seed.ts`, including both relationship arrays. Never treat test fixtures as verified seed data.
-5. Increase the dataset version from 0 to 1 for the first verified dataset, and increment it on every later data change. A version must identify one complete dataset.
+## Recommendation rules
 
-Schema version and dataset version are independent. Repeated launches with the same version skip reseeding. A higher dataset version replaces only bundled reference tables within the initialization transaction. Any insertion failure rolls back the replacement. A newer local schema or dataset is rejected rather than silently downgraded. Future user-owned data must live outside these reference tables.
+A lookup first resolves the origin and destination, then retrieves only directional routes serving that destination through points linked to the origin. Same-place selection returns `already-at-destination`. Results have stable route/stop ordering and contain no transfer planning or nearest-point assumptions.
 
-The bundled data is available without first-launch downloads. Until verified data is added, selection lists are empty and arbitrary IDs return unsupported results.
+Missing evidence, unconfirmed boarding/access, and missing essential instructions block `available`. If some options are ready, `available` contains only those options. Otherwise, a published/verified named leg with source/date, explicit limitations, boarding and alighting guidance can return `source-based`. Gaps stay attached. Pending or evidence-free records remain `incomplete-guidance`. Pass `false` to the lookup's third argument or destination filter's second argument to disable source-based fallback.
 
-## UI integration contract
+Missing boarding coordinates is informational: it prevents proximity ranking but does not block otherwise complete manual guidance. GPS remains an optional enhancement. Do not rank null coordinate pairs or turn a null pair into zero. Explicit reviewed no-walk wording can be recorded where appropriate; null text always means unknown, never that walking is unnecessary.
 
-Use `listLandmarks()` for manual fallback selection and `listDestinations()` for the supported destination list. Call `lookupTransportation()` with their IDs.
+The lookup does not require a classification label or origin/destination coordinates. It does not query an ML model, GPS service, network, or tile server.
 
-| Result status | Intended UI response |
-| --- | --- |
-| `available` | Show the destination, route name, vehicle type, eligible boarding locations, and recorded commuter instructions. |
-| `unsupported-origin` | Ask the user to select a supported landmark. |
-| `unsupported-destination` | Ask the user to select a supported destination. |
-| `no-routes` | Explain that no verified direct option is available for this combination. |
+## Storage and migrations
 
-Database failures reject the promise and must be handled separately from an empty lookup. Do not display a storage error as an unsupported location. The mobile UI branch owns loading, retry, and error presentation.
+SQLite usage follows [Expo SDK 57](https://docs.expo.dev/versions/v57.0.0/sdk/sqlite/). Version 3 follows SQLite's documented [create/copy/drop/rename migration](https://www.sqlite.org/lang_altertable.html) to allow null coordinate pairs and null labels. Existing values are copied into rebuilt parent tables; route and relationship records remain in place. New review fields default to pending/false on migrated data.
 
-GPS-based distance ranking remains for the location/maps branch: filter eligible options before measuring distance, handle missing GPS, and label Haversine results as straight-line distances. Maps must not be a prerequisite for this lookup.
+The initialization connection remains private until complete. For the version 3 rebuild, foreign-key enforcement is disabled before the transaction, a foreign-key check runs before commit, and enforcement is enabled again before callers receive the connection. Normal version 3 launches keep enforcement enabled. Migration, schema marker, seed replacement, and dataset metadata share one transaction. Failed writes roll back; failed initialization closes the connection and permits retry.
 
-## Commuter instructions (schema version 2)
+Dataset validation runs before any reference deletion, including when the version matches. Foreign keys, coordinate pairs/ranges, allowed vehicle and evidence types, unique labels, and stop ordering also have SQL constraints. SQL values are bound parameters.
 
-Instructions are stored offline with the relationship they describe:
+Dataset and schema versions are independent. The same dataset version skips replacement; increment it whenever bundled content changes. A newer stored schema or dataset is rejected. The replaced tables contain bundled reference data only; future user data must be stored separately.
 
-| Stored field | Returned field on each boarding option | Responsibility |
-| --- | --- | --- |
-| `landmark_boarding_points.walking_instructions` | `originWalkingInstructions` | Walk from the selected landmark to the boarding point. |
-| `route_boarding_points.boarding_instructions` | `boardingInstructions` | Queue, direction, or signboard guidance for that route at that point. |
-| `transportation_routes.alighting_location` | `route.alightingLocation` | Named place to get off for this directional destination-specific route. |
-| `transportation_routes.alighting_instructions` | `route.alightingInstructions` | Additional reviewed guidance for getting off. |
-| `transportation_routes.destination_walking_instructions` | `route.destinationWalkingInstructions` | Remaining pedestrian access from alighting to the chosen destination entrance. |
+## Completing the data
 
-Every new field is `string | null`. `null` means unknown or not recorded; it never means that no walking is needed. The UI should label missing guidance as unavailable and must not manufacture a path, walking distance, or time. Store verified no-walk guidance explicitly when applicable. These are authored directions, not computed pedestrian routing. The current model assumes one alighting site per directional destination-specific route; represent different alighting variants separately.
+Use reliable published or observed evidence to establish exact boarding/access and final pedestrian guidance, then update the dataset's relationship review flags and instruction fields. Coordinates can be completed independently for proximity/maps. Keep source references and limitations, and increase the dataset version.
 
-Fresh databases create the original tables and then apply the same version 2 migration used for existing version 1 databases. The migration adds nullable columns without replacing existing rows. Schema changes, the version marker, and any dataset update share the initialization transaction. Existing dataset versions are retained; bump the dataset version separately when adding reviewed instruction content. Older records return `null` for their new fields.
+The first seed deliberately preserves incomplete states instead of importing all research leads. See [Circuit access research](./data/circuit-access-research.md) for the remaining evidence gaps. No full commuting recommendation becomes ready merely because model training finishes.
 
-Model training is not required to implement or review these instructions. Keep worksheet classification labels blank until the ML teammate agrees on the mapping. The current landmark contract still requires a label before seed inclusion; it need not come from a finished trained model, but must be explicitly agreed rather than guessed. Manual landmark selection and transport lookup use stable landmark IDs, not inference scores. No label mapping or model asset has been generated here.
+## Verification status
 
-## Deferred verification
-
-Before connecting this to the demo, verify on Android: first launch in airplane mode, version 1 to 2 migration preserving existing rows, repeat initialization, instruction round-trips and null handling, complete pilot lookups, unsupported combinations, invalid seed rollback, and dataset version upgrades. Add isolated synthetic fixtures for tests only; do not put them into the bundled dataset. Check GPS ranking separately when implemented. Tests, lint, typechecks, and builds remain paused at the user's request; this increment has only received manual source review.
+Checks resumed: TypeScript, lint, and 11 isolated Node SQLite/domain checks pass. Pre-existing CSS declarations and a template web hydration lint issue were fixed. Native Expo SQLite and physical Android airplane-mode verification remain outstanding. See [offline-data-verification.md](./offline-data-verification.md) for results and [branch-integration.md](./branch-integration.md) for the team handoff. Nothing was committed or pushed.
