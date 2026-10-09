@@ -4,7 +4,7 @@ Schema version: 3. Bundled dataset version: 3.
 
 The Android database now bundles the 14-place Makati catalog and two published directional Circuit/One Ayala bus legs. Manual selection and lookup work without a model, network request, or map. The current bus journeys remain incomplete guidance: exact boarding access and final pedestrian instructions have not been established. No ready recommendation is claimed for the current dataset.
 
-The user authorized web-sourced suggestions for remote development. Dataset 4 includes four explicit bus-plus-walk variants, for six recommendation records using the same two vehicle legs. These return `source-based` with sources and limitations; complete `available` guidance remains separate. See [web-recommendations.md](./data/web-recommendations.md).
+The user authorized web-sourced suggestions for remote development. Dataset 6 includes four explicit bus-plus-walk variants, for six recommendation records using the same two vehicle legs. These return `source-based` with sources and limitations; complete `available` guidance remains separate. See [web-recommendations.md](./data/web-recommendations.md).
 
 ## Implementation
 

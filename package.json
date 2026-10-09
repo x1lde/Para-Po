@@ -50,6 +50,7 @@
     "web": "expo start --web",
     "lint": "expo lint",
     "check:offline-data": "node scripts/check-offline-data.cjs",
+    "report:offline-coverage": "node scripts/report-offline-coverage.cjs",
     "check:maps": "node scripts/check-map-scene.cjs",
     "check:location": "node scripts/check-location.cjs",
     "check:recognition": "node scripts/check-recognition.cjs",

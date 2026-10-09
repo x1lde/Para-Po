@@ -39,6 +39,7 @@ const modelClassificationLabels: Readonly<Record<(typeof places)[number][0], str
 
 const sourceReference = 'https://www.topgear.com.ph/news/motoring-news/p2p-2026-circuit-makati-one-ayala-a2619-20260428';
 const accessReference = 'https://thebeat.asia/manila/nomads/explore/ayala-center-malls-guide';
+const terminalReference = 'https://www.globe.com.ph/blog/one-ayala-terminal-guide';
 
 // These are recommendation variants of the same bus leg, not additional bus services.
 const onwardJourneys = [
@@ -74,8 +75,8 @@ const onwardRoutes = onwardJourneys.map<TransportationRoute>((journey) => ({
 
 /** Web-sourced pilot suggestions; verification flags and unknown coordinates remain explicit. */
 export const pilotDataset: TransportDataset = {
-  version: 5,
-  sourceNotes: 'Underscore-separated landmark and destination IDs; 14 user-supplied Makati places after removing Manila Premiere Wines due to insufficient training images; 6 web-sourced recommendation records using 2 published directional bus legs and 4 onward walking variants. Sources: April 28 2026 P2P report and February 24 2026 mall connection guide, reviewed 2026-10-09. Combined bus-plus-walk journeys are explicitly assembled from separate sources. Landmark classification labels map recognition model outputs. Unknown coordinates remain null and access/boarding flags remain false. See docs/data/web-recommendations.md. No field verification or guaranteed current operation is claimed.',
+  version: 6,
+  sourceNotes: 'Underscore-separated landmark and destination IDs; 14 user-supplied Makati places after removing Manila Premiere Wines due to insufficient training images; 6 web-sourced recommendation records using 2 published directional bus legs and 4 onward walking variants. Sources: April 28 2026 P2P report and February 24 2026 mall connection guide, reviewed 2026-10-09. Combined bus-plus-walk journeys are explicitly assembled from separate sources. Landmark classification labels map recognition model outputs. Unknown coordinates remain null and access/boarding flags remain false. See docs/data/web-recommendations.md. Dataset 6 adds general One Ayala Upper Ground orientation from the March 2026 Globe guide and clarifies the inbound final stop, reviewed 2026-10-10. Exact bay and access remain unconfirmed. No field verification or guaranteed current operation is claimed.',
   landmarks: places.map(([id, name]) => ({
     id, name, latitude: null, longitude: null, classificationLabel: modelClassificationLabels[id],
   })),
@@ -88,9 +89,9 @@ export const pilotDataset: TransportDataset = {
     {
       id: 'circuit-p2p-to-one-ayala', name: 'Circuit Makati to One Ayala P2P',
       transportationType: 'bus', destinationId: 'one_ayala',
-      alightingLocation: 'One Ayala', alightingInstructions: 'Get off at One Ayala.',
+      alightingLocation: 'One Ayala', alightingInstructions: 'Get off at One Ayala, after the published Security Bank stop on Ayala Avenue. Confirm the final stop with the driver.',
       destinationWalkingInstructions: null,
-      evidenceStatus: 'published-confirmed', sourceReference, reviewedOn: '2026-10-09',
+      evidenceStatus: 'published-confirmed', sourceReference, reviewedOn: '2026-10-10',
       limitations: 'Named bus leg is published. Exact loading curb, arrival bay, and pedestrian access remain unconfirmed. The report describes weekday service excluding holidays and beep-card payment; current conditions require confirmation.',
     },
     {
@@ -99,7 +100,7 @@ export const pilotDataset: TransportDataset = {
       alightingLocation: 'Gallery Drive, Circuit Makati',
       alightingInstructions: 'Get off at Gallery Drive in Circuit Makati.',
       destinationWalkingInstructions: null,
-      evidenceStatus: 'published-confirmed', sourceReference, reviewedOn: '2026-10-09',
+      evidenceStatus: 'published-confirmed', sourceReference: `${sourceReference} | ${terminalReference}`, reviewedOn: '2026-10-10',
       limitations: 'Named bus leg is published. Exact One Ayala loading bay and access to the selected Circuit mall entrance remain unconfirmed. Gallery Drive arrival is distinct from CityFlats return pickup. Current operating conditions require confirmation.',
     },
     ...onwardRoutes,
@@ -112,7 +113,7 @@ export const pilotDataset: TransportDataset = {
     },
     {
       routeId: 'circuit-p2p-to-circuit', boardingPointId: 'one-ayala-p2p-loading',
-      stopOrder: 0, boardingInstructions: 'Board the Circuit Makati-bound P2P at One Ayala.',
+      stopOrder: 0, boardingInstructions: 'At One Ayala’s Upper Ground bus/P2P area, ask terminal staff for the Circuit Makati-bound P2P and confirm its current loading bay before boarding. The exact bay is unconfirmed.',
       boardingVerified: false,
     },
     ...onwardRoutes.map((route) => ({
