@@ -1,0 +1,101 @@
+{
+  "input": {
+    "shape": [
+      1,
+      224,
+      224,
+      3
+    ],
+    "dtype": "float32",
+    "color": "RGB",
+    "range": [
+      0,
+      255
+    ]
+  },
+  "output": {
+    "dtype": "float32",
+    "type": "softmax",
+    "temperature_baked_in": 1.0800000000000007
+  },
+  "labels": [
+    "avida_towers_makati_southpoint",
+    "ayala_center",
+    "ayala_malls_circuit",
+    "ayala_museum",
+    "glorietta",
+    "greenbelt",
+    "makati_city_hall",
+    "one_ayala",
+    "other",
+    "powerplant_mall",
+    "rcbc_plaza",
+    "salcedo_weekend_market",
+    "sm_makati",
+    "st_john_bosco_parish",
+    "the_landmark_makati"
+  ],
+  "confidence_threshold": 0.85,
+  "target_precision": 0.95,
+  "skipped_classes": {},
+  "metrics": {
+    "train_images": 4918,
+    "val_images": 1443,
+    "temperature": 1.0800000000000007,
+    "val_all": {
+      "images": 1443,
+      "top1": 0.656964656964657,
+      "top3": 0.8558558558558559,
+      "answered_fraction": 0.2986832986832987,
+      "accuracy_when_answered": 0.9559164733178654,
+      "mean_confidence_correct": 0.7384454011917114,
+      "recall_per_class": {
+        "avida_towers_makati_southpoint": 0.7222222222222222,
+        "ayala_center": 0.3333333333333333,
+        "ayala_malls_circuit": 0.4666666666666667,
+        "ayala_museum": 0.6986301369863014,
+        "glorietta": 0.6821705426356589,
+        "greenbelt": 0.5878378378378378,
+        "makati_city_hall": 0.78125,
+        "one_ayala": 0.8344827586206897,
+        "other": 0.43333333333333335,
+        "powerplant_mall": 0.6464646464646465,
+        "rcbc_plaza": 0.5,
+        "salcedo_weekend_market": 0.8,
+        "sm_makati": 0.616822429906542,
+        "st_john_bosco_parish": 0.7647058823529411,
+        "the_landmark_makati": 0.8536585365853658
+      }
+    },
+    "val_photos_only": {
+      "images": 222,
+      "top1": 0.7027027027027027,
+      "top3": 0.8513513513513513,
+      "answered_fraction": 0.4594594594594595,
+      "accuracy_when_answered": 0.9705882352941176,
+      "mean_confidence_correct": 0.8250545859336853,
+      "recall_per_class": {
+        "avida_towers_makati_southpoint": 1.0,
+        "ayala_center": 0.3333333333333333,
+        "ayala_malls_circuit": 0.6666666666666666,
+        "ayala_museum": 1.0,
+        "glorietta": 0.5714285714285714,
+        "greenbelt": 0.75,
+        "makati_city_hall": 0.9411764705882353,
+        "one_ayala": 0.7692307692307693,
+        "powerplant_mall": 0.7142857142857143,
+        "rcbc_plaza": 0.55,
+        "salcedo_weekend_market": 0.8125,
+        "sm_makati": 0.4117647058823529,
+        "st_john_bosco_parish": 0.75,
+        "the_landmark_makati": 0.7272727272727273
+      }
+    },
+    "keras_tflite_max_abs_diff": 0.011741042137145996,
+    "best_epochs": [
+      13,
+      13
+    ],
+    "shipped": "final fit on train+val; metrics above are from the held-out run"
+  }
+}
