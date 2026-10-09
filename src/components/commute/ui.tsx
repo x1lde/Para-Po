@@ -1,10 +1,13 @@
 import { Image } from 'expo-image';
-import { Pressable, ScrollView, StyleSheet, View, type ViewProps } from 'react-native';
-import type { ReactNode } from 'react';
+import { ScrollView, StyleSheet, View, type ViewProps } from 'react-native';
+import { Children, type ReactNode, useEffect, useRef } from 'react';
+import Animated, { useAnimatedStyle, useReducedMotion, useSharedValue, withSequence, withSpring, withTiming } from 'react-native-reanimated';
+import { onScrollToTop } from './scroll-top';
 import { ThemedText } from '@/components/themed-text';
 import { Brand } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useResponsiveLayout } from '@/hooks/use-responsive-layout';
+import { PressScale, Reveal } from './motion';
 
 const paths = {
   compass: '<circle cx="12" cy="12" r="9"/><path d="m16 8-3 5-5 3 3-5Z"/>',
@@ -39,8 +42,6 @@ export const artwork = {
   star: require('../../../assets/reference-ui/star.svg'), pin: require('../../../assets/reference-ui/pin.svg'),
   bus: require('../../../assets/reference-ui/bus.svg'), jeepney: require('../../../assets/reference-ui/jeepney.svg'),
   ejeep: require('../../../assets/reference-ui/ejeep.svg'), tricycle: require('../../../assets/reference-ui/tricycle.svg'),
-  map: require('../../../assets/reference-ui/city-map.svg'),
-  mapDark: require('../../../assets/reference-ui/city-map-dark.svg'),
 };
 const brand = {
   mark: require('../../../assets/brand/parapo-mark.png'),
@@ -48,12 +49,27 @@ const brand = {
   po: require('../../../assets/brand/parapo-wordmark-po.png'),
 };
 /** The ParaPo! logo from the brand board: jeepney mark + wordmark. "Para" turns light on dark backgrounds. */
-export function BrandLogo({ size = 40, wordmark = true, onDark }: { size?: number; wordmark?: boolean; onDark?: boolean }) {
+/** The logo springs in on mount, and gives a small wiggle while `hovered` is true (web). */
+export function BrandLogo({ size = 40, wordmark = true, onDark, hovered = false }: { size?: number; wordmark?: boolean; onDark?: boolean; hovered?: boolean }) {
   const t = useTheme();
+  const reduced = useReducedMotion();
   const light = onDark ?? t.dark;
   const height = Math.round(size * 0.6);
+  const markScale = useSharedValue(reduced ? 1 : .6);
+  const markTilt = useSharedValue(reduced ? 0 : -14);
+  useEffect(() => {
+    if (reduced) return;
+    markScale.value = withSpring(1, { damping: 9, stiffness: 170 });
+    markTilt.value = withSpring(0, { damping: 11, stiffness: 150 });
+  }, [reduced, markScale, markTilt]);
+  const wiggle = useSharedValue(0);
+  useEffect(() => {
+    if (reduced || !hovered) return;
+    wiggle.value = withSequence(withTiming(-8, { duration: 110 }), withTiming(6, { duration: 160 }), withSpring(0, { damping: 9, stiffness: 180 }));
+  }, [hovered, reduced, wiggle]);
+  const markStyle = useAnimatedStyle(() => ({ transform: [{ scale: markScale.value }, { rotate: `${markTilt.value + wiggle.value}deg` }] }));
   return <View style={[ui.row, { gap: Math.round(size * 0.2) }]} accessible accessibilityRole="image" accessibilityLabel="ParaPo!">
-    <Image source={brand.mark} style={{ width: size * 0.947, height: size }} contentFit="contain" />
+    <Animated.View style={markStyle}><Image source={brand.mark} style={{ width: size * 0.947, height: size }} contentFit="contain" /></Animated.View>
     {wordmark && <View style={{ flexDirection: 'row' }}>
       <Image source={brand.para} style={{ width: height * 2.156, height }} contentFit="contain" tintColor={light ? '#FFF9E9' : undefined} />
       <Image source={brand.po} style={{ width: height * 1.331, height }} contentFit="contain" />
@@ -71,11 +87,11 @@ export function Button({ children, onPress, disabled = false, icon, secondary = 
   const t = useTheme();
   const background = brand ? Brand.teal : secondary ? t.backgroundSelected : t.primary;
   const foreground = brand ? '#FFFFFF' : secondary ? t.primary : t.primaryText;
-  return <Pressable accessibilityRole="button" accessibilityState={{ disabled }} disabled={disabled} onPress={onPress}
-    style={({ pressed }) => [ui.button, { backgroundColor: background, opacity: disabled ? .45 : pressed ? .8 : 1 }]}>
+  return <PressScale accessibilityRole="button" accessibilityState={{ disabled }} disabled={disabled} onPress={onPress} hitSlop={4}
+    style={[ui.button, { backgroundColor: background }]}>
     <ThemedText style={{ flex: 1, color: foreground, fontWeight: '700' }}>{children}</ThemedText>
     {icon && <Icon name={icon} color={foreground} />}
-  </Pressable>;
+  </PressScale>;
 }
 export function Card({ style, ...props }: ViewProps) {
   const t = useTheme();
@@ -83,8 +99,10 @@ export function Card({ style, ...props }: ViewProps) {
 }
 export function Page({ children }: { children: ReactNode }) {
   const { gutter } = useResponsiveLayout();
-  return <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={[ui.page, { paddingHorizontal: gutter }]}>
-    <View style={ui.pageInner}>{children}<Footer /></View>
+  const scroller = useRef<ScrollView>(null);
+  useEffect(() => onScrollToTop(() => scroller.current?.scrollTo({ y: 0, animated: true })), []);
+  return <ScrollView ref={scroller} keyboardShouldPersistTaps="handled" contentContainerStyle={[ui.page, { paddingHorizontal: gutter }]}>
+    <View style={ui.pageInner}>{Children.toArray(children).map((child, i) => <Reveal key={i} delay={Math.min(i, 6) * 80}>{child}</Reveal>)}<Reveal delay={Math.min(Children.count(children), 6) * 80}><Footer /></Reveal></View>
   </ScrollView>;
 }
 export function Intro({ eyebrow, title, description }: { eyebrow: string; title: string; description: string }) {

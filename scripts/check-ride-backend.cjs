@@ -27,7 +27,7 @@ function fixture() {
     'react-native': { Pressable: 'Pressable', View: 'View', StyleSheet: { create: (styles) => styles, absoluteFill: {} } },
     '@/components/themed-text': { ThemedText: 'Text' },
     '@/components/commute/ui': { Art: 'Art', artwork: {}, Button: 'Button', Card: 'Card', Icon: 'Icon', Intro: 'Intro', Page: 'Page', ui: { row: {} } },
-    '@/components/commute/illustrated-map': { IllustratedMap: 'IllustratedMap' },
+    '@/components/commute/makati-map': { MakatiMap: 'MakatiMap' },
     '@/database/data/pilot-dataset': { pilotDataset: { landmarks: places, destinations: places } },
     '@/features/maps/components/ChoicePicker': { ChoicePicker: 'ChoicePicker' },
     '@/hooks/use-theme': { useTheme: () => ({}) },

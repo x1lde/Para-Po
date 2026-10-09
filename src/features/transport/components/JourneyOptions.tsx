@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Linking, Pressable, StyleSheet, View } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
 import { Art, Card, Icon, ui } from '@/components/commute/ui';
+import { PressScale, Reveal } from '@/components/commute/motion';
 import { useTheme } from '@/hooks/use-theme';
 import {
   formatDistance, MODE_LABELS, routeOf, TRANSIT_ATTRIBUTION, TRANSIT_DATA_DATE,
@@ -30,8 +31,9 @@ export function JourneyOptions({ plan, selected = 0, onSelect, limit }: {
       <ThemedText type="smallBold">{plan.origin.name} → {plan.destination.name}</ThemedText>
       <ThemedText type="small" themeColor="textSecondary">{formatDistance(plan.straightMeters)} apart · {plan.options.length} {plan.options.length === 1 ? 'way' : 'ways'} to go</ThemedText>
     </View>
-    {options.map((option, index) => <OptionCard key={index} option={option} best={index === 0} selected={index === selected}
-      onPress={onSelect ? () => onSelect(index) : undefined} />)}
+    {options.map((option, index) => <Reveal key={`${plan.origin.id}-${plan.destination.id}-${index}`} delay={index * 90}>
+      <OptionCard option={option} best={index === 0} selected={index === selected} onPress={onSelect ? () => onSelect(index) : undefined} />
+    </Reveal>)}
     <View style={[ui.row, { alignItems: 'flex-start' }]}><Icon name="shield" size={15} color={t.textSecondary} />
       <ThemedText type="small" themeColor="textSecondary" style={{ flex: 1 }}>Times are estimates with a typical wait, not schedules. Check the signboard before boarding. {TRANSIT_ATTRIBUTION} Data from {TRANSIT_DATA_DATE}.</ThemedText></View>
   </View>;
@@ -81,8 +83,9 @@ function OptionCard({ option, best, selected, onPress }: { option: JourneyOption
   </>;
   const style = [styles.card, selected && onPress ? { borderColor: t.primary, borderWidth: 2 } : null];
   if (!onPress) return <Card style={style}>{body}</Card>;
-  return <Pressable accessibilityRole="button" accessibilityState={{ selected }} accessibilityLabel={`${title}, about ${option.minutes} minutes`} onPress={onPress}
-    style={({ pressed }) => ({ opacity: pressed ? .85 : 1 })}><Card style={style}>{body}</Card></Pressable>;
+  return <PressScale accessibilityRole="button" accessibilityState={{ selected }} accessibilityLabel={`${title}, about ${option.minutes} minutes`} onPress={onPress}>
+    <Card style={style}>{body}</Card>
+  </PressScale>;
 }
 
 function Step({ title, detail, icon, color, last }: { title: string; detail: string; icon: 'walk' | 'bus'; color: string; last: boolean }) {
