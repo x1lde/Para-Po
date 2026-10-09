@@ -53,7 +53,8 @@
     "check:maps": "node scripts/check-map-scene.cjs",
     "check:location": "node scripts/check-location.cjs",
     "check:recognition": "node scripts/check-recognition.cjs",
-    "check:camera": "node scripts/check-camera.cjs"
+    "check:camera": "node scripts/check-camera.cjs",
+    "check:journeys": "node scripts/check-journeys.cjs"
   },
   "private": true
 }

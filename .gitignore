@@ -42,3 +42,12 @@ example
 # generated native folders
 /ios
 /android
+
+# raw OpenStreetMap downloads (re-fetch with tools/transit/fetch_osm.py)
+tools/transit/cache/
+# browser automation screenshots
+.playwright-mcp/
+
+# Python bytecode
+__pycache__/
+*.pyc
