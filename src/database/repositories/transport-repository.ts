@@ -1,0 +1,82 @@
+import { getDatabase } from '../client';
+
+import type {
+  BoardingOption,
+  Destination,
+  Landmark,
+  TransportationType,
+} from '@/features/transport/types';
+
+export async function listDestinations(): Promise<Destination[]> {
+  const db = await getDatabase();
+  return db.getAllAsync<Destination>(
+    'SELECT id, name, latitude, longitude FROM destinations ORDER BY name COLLATE NOCASE, id'
+  );
+}
+
+export async function listLandmarks(): Promise<Landmark[]> {
+  const db = await getDatabase();
+  return db.getAllAsync<Landmark>(
+    `SELECT id, name, latitude, longitude, classification_label AS classificationLabel
+     FROM landmarks ORDER BY name COLLATE NOCASE, id`
+  );
+}
+
+export async function findLandmark(id: string): Promise<Landmark | null> {
+  const db = await getDatabase();
+  return db.getFirstAsync<Landmark>(
+    `SELECT id, name, latitude, longitude, classification_label AS classificationLabel
+     FROM landmarks WHERE id = ?`, id
+  );
+}
+
+export async function findDestination(id: string): Promise<Destination | null> {
+  const db = await getDatabase();
+  return db.getFirstAsync<Destination>(
+    'SELECT id, name, latitude, longitude FROM destinations WHERE id = ?', id
+  );
+}
+
+interface BoardingOptionRow {
+  routeId: string;
+  routeName: string;
+  transportationType: TransportationType;
+  destinationId: string;
+  boardingPointId: string;
+  boardingPointName: string;
+  latitude: number;
+  longitude: number;
+}
+
+export async function findBoardingOptions(
+  landmarkId: string,
+  destinationId: string
+): Promise<BoardingOption[]> {
+  const db = await getDatabase();
+  const rows = await db.getAllAsync<BoardingOptionRow>(
+    `SELECT r.id AS routeId, r.name AS routeName,
+            r.transportation_type AS transportationType, r.destination_id AS destinationId,
+            b.id AS boardingPointId, b.name AS boardingPointName, b.latitude, b.longitude
+     FROM transportation_routes r
+     JOIN route_boarding_points rb ON rb.route_id = r.id
+     JOIN boarding_points b ON b.id = rb.boarding_point_id
+     JOIN landmark_boarding_points lb ON lb.boarding_point_id = b.id
+     WHERE r.destination_id = ? AND lb.landmark_id = ?
+     ORDER BY r.name COLLATE NOCASE, r.id, rb.stop_order, b.id`,
+    destinationId, landmarkId
+  );
+  return rows.map((row) => ({
+    route: {
+      id: row.routeId,
+      name: row.routeName,
+      transportationType: row.transportationType,
+      destinationId: row.destinationId,
+    },
+    boardingPoint: {
+      id: row.boardingPointId,
+      name: row.boardingPointName,
+      latitude: row.latitude,
+      longitude: row.longitude,
+    },
+  }));
+}
