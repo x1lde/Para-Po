@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
 import { Art, Button, Card, Icon, Intro, Page, ui } from '@/components/commute/ui';
 import { pilotDataset } from '@/database/data/pilot-dataset';
+import { TRANSIT_ROUTE_COUNT } from '@/features/transport/planner/journey-planner';
 import { useTheme } from '@/hooks/use-theme';
 import { useResponsiveLayout } from '@/hooks/use-responsive-layout';
 
@@ -20,7 +21,7 @@ export default function LandmarkGuide() {
       </Card>
       <Card style={{ flex: 1, paddingVertical: 8 }}>{[
         ['camera', 'On-device', 'Landmark recognition', 'No photo upload'],
-        ['map', String(pilotDataset.routes.length), 'bundled journey options', 'Local guidance'],
+        ['map', String(TRANSIT_ROUTE_COUNT), 'jeepney, bus and P2P routes', 'Works offline'],
         ['pin', String(pilotDataset.landmarks.length), 'places to start from', 'Makati City'],
       ].map(([icon, value, label, note], i) => <View key={label} style={[styles.stat, { borderTopWidth: i ? 1 : 0, borderColor: t.line }]}>
         <View style={[styles.statIcon, { backgroundColor: t.backgroundSelected }]}><Icon name={icon as 'camera' | 'map' | 'pin'} size={23} /></View>
@@ -35,7 +36,7 @@ export default function LandmarkGuide() {
     ].map((item) => <Pressable key={item.title} accessibilityRole="button" onPress={() => router.navigate(item.path)} style={({ pressed }) => [{ flex: 1, opacity: pressed ? .7 : 1 }]}>
       <Card style={{ flex: 1 }}><View style={[styles.badge, { backgroundColor: item.color }]}><Art name={item.art} size={57} /></View><ThemedText type="smallBold">{item.title}</ThemedText><ThemedText type="small" themeColor="textSecondary">{item.text}</ThemedText></Card>
     </Pressable>)}</View>
-    <View><ThemedText type="subtitle">Your familiar places</ThemedText><ThemedText type="small" themeColor="textSecondary">Tap a landmark to use it as your starting point. Journey coverage varies by place.</ThemedText></View>
+    <View><ThemedText type="subtitle">Your familiar places</ThemedText><ThemedText type="small" themeColor="textSecondary">Tap a landmark to use it as your starting point. Every landmark connects to all the others.</ThemedText></View>
     <View style={styles.catalog}>{pilotDataset.landmarks.map((landmark) => <Pressable key={landmark.id} accessibilityRole="button"
       style={({ pressed }) => [styles.landmark, { borderColor: t.line, backgroundColor: pressed ? t.backgroundSelected : t.backgroundElement, width: wide ? '48%' : '100%' }]}
       onPress={() => router.navigate({ pathname: '/map', params: { originId: landmark.id, originRequest: String(Date.now()) } })}>

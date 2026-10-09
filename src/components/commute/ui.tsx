@@ -2,6 +2,7 @@ import { Image } from 'expo-image';
 import { Pressable, ScrollView, StyleSheet, View, type ViewProps } from 'react-native';
 import type { ReactNode } from 'react';
 import { ThemedText } from '@/components/themed-text';
+import { Brand } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useResponsiveLayout } from '@/hooks/use-responsive-layout';
 
@@ -24,6 +25,8 @@ const paths = {
   swap: '<path d="M4 7h16m-4-4 4 4-4 4M20 17H4m4-4-4 4 4 4"/>',
   sparkle: '<path d="m12 3 2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5Z"/>',
   close: '<path d="m6 6 12 12 M6 18 18 6"/>',
+  walk: '<circle cx="13" cy="4" r="2"/><path d="m9 21 2-6 3 3v3 M6 12l4-4 4 1 2 4 3 1 M11 15l-1-5"/>',
+  bus: '<rect x="4" y="3" width="16" height="15" rx="3"/><path d="M4 11h16 M7 18v3 M17 18v3"/><circle cx="8" cy="14.5" r="1"/><circle cx="16" cy="14.5" r="1"/>',
 } as const;
 export function Icon({ name, size = 20, color }: { name: keyof typeof paths; size?: number; color?: string }) {
   const theme = useTheme();
@@ -39,17 +42,39 @@ export const artwork = {
   map: require('../../../assets/reference-ui/city-map.svg'),
   mapDark: require('../../../assets/reference-ui/city-map-dark.svg'),
 };
+const brand = {
+  mark: require('../../../assets/brand/parapo-mark.png'),
+  para: require('../../../assets/brand/parapo-wordmark-para.png'),
+  po: require('../../../assets/brand/parapo-wordmark-po.png'),
+};
+/** The ParaPo! logo from the brand board: jeepney mark + wordmark. "Para" turns light on dark backgrounds. */
+export function BrandLogo({ size = 40, wordmark = true, onDark }: { size?: number; wordmark?: boolean; onDark?: boolean }) {
+  const t = useTheme();
+  const light = onDark ?? t.dark;
+  const height = Math.round(size * 0.6);
+  return <View style={[ui.row, { gap: Math.round(size * 0.2) }]} accessible accessibilityRole="image" accessibilityLabel="ParaPo!">
+    <Image source={brand.mark} style={{ width: size * 0.947, height: size }} contentFit="contain" />
+    {wordmark && <View style={{ flexDirection: 'row' }}>
+      <Image source={brand.para} style={{ width: height * 2.156, height }} contentFit="contain" tintColor={light ? '#FFF9E9' : undefined} />
+      <Image source={brand.po} style={{ width: height * 1.331, height }} contentFit="contain" />
+    </View>}
+  </View>;
+}
 export function Art({ name, size = 48 }: { name: keyof typeof artwork; size?: number }) {
   return <Image source={artwork[name]} style={{ width: size, height: size }} contentFit="contain" cachePolicy="memory-disk" accessibilityElementsHidden />;
 }
-export function Button({ children, onPress, disabled = false, icon, secondary = false }: {
+export function Button({ children, onPress, disabled = false, icon, secondary = false, brand = false }: {
   children: ReactNode; onPress: () => void; disabled?: boolean; icon?: keyof typeof paths; secondary?: boolean;
+  /** Brand teal with white text in both themes, for buttons on the always-yellow hero. */
+  brand?: boolean;
 }) {
   const t = useTheme();
+  const background = brand ? Brand.teal : secondary ? t.backgroundSelected : t.primary;
+  const foreground = brand ? '#FFFFFF' : secondary ? t.primary : t.primaryText;
   return <Pressable accessibilityRole="button" accessibilityState={{ disabled }} disabled={disabled} onPress={onPress}
-    style={({ pressed }) => [ui.button, { backgroundColor: secondary ? t.backgroundSelected : t.primary, opacity: disabled ? .45 : pressed ? .8 : 1 }]}>
-    <ThemedText style={{ flex: 1, color: secondary ? t.primary : t.primaryText, fontWeight: '700' }}>{children}</ThemedText>
-    {icon && <Icon name={icon} color={secondary ? t.primary : t.primaryText} />}
+    style={({ pressed }) => [ui.button, { backgroundColor: background, opacity: disabled ? .45 : pressed ? .8 : 1 }]}>
+    <ThemedText style={{ flex: 1, color: foreground, fontWeight: '700' }}>{children}</ThemedText>
+    {icon && <Icon name={icon} color={foreground} />}
   </Pressable>;
 }
 export function Card({ style, ...props }: ViewProps) {

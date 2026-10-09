@@ -3,7 +3,7 @@ import { Tabs, TabList, TabSlot, TabTrigger, type TabTriggerSlotProps } from 'ex
 import { Pressable, StyleSheet, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ThemedText } from '../themed-text';
-import { Art, Icon } from './ui';
+import { BrandLogo, Icon } from './ui';
 import { useTheme } from '@/hooks/use-theme';
 import { useResponsiveLayout } from '@/hooks/use-responsive-layout';
 
@@ -22,23 +22,25 @@ function TabButton({ isFocused, children, icon, mobile, ...props }: TabTriggerSl
 }
 export default function AppTabs() {
   const t = useTheme();
-  const { desktop, compact } = useResponsiveLayout();
+  const { desktop, compact, gutter } = useResponsiveLayout();
   const insets = useSafeAreaInsets();
   const links = (mobile: boolean) => navigation.map((tab) => <TabTrigger name={tab.name} key={tab.name} asChild>
     <TabButton icon={tab.icon} mobile={mobile}>{mobile ? tab.mobile : tab.label}</TabButton>
   </TabTrigger>);
   return <Tabs style={[styles.page, { backgroundColor: t.background }]}>
-    <SafeAreaView edges={['top', 'left', 'right']} style={{ backgroundColor: t.backgroundElement, borderBottomWidth: 1, borderBottomColor: t.line }}>
-      <View style={[styles.header, { minHeight: desktop ? 86 : 72, paddingHorizontal: desktop ? 40 : 16 }]}>
-        <Pressable accessibilityRole="button" accessibilityLabel="Para-Po home" onPress={() => router.navigate('/')} style={({ pressed }) => [styles.brand, { opacity: pressed ? .65 : 1 }]}>
-          <View style={[styles.brandIcon, { backgroundColor: t.yellow }]}><Art name="ejeep" size={34} /></View>
-          <ThemedText style={styles.brandText}>ParaPo<ThemedText style={[styles.brandText, { color: t.orange }]}>!</ThemedText></ThemedText>
+    <SafeAreaView edges={['top', 'left', 'right']} style={{ backgroundColor: t.backgroundElement }}>
+      <View style={[styles.header, { height: desktop ? 76 : 64, paddingHorizontal: gutter }]}>
+        <Pressable accessibilityRole="button" accessibilityLabel="ParaPo! home" onPress={() => router.navigate('/')} style={({ pressed }) => [styles.brand, { opacity: pressed ? .65 : 1 }]}>
+          <BrandLogo size={desktop ? 46 : compact ? 34 : 40} />
         </Pressable>
         {desktop && <View style={styles.nav}>{links(false)}</View>}
         <View style={styles.actions}>
-          {!compact && <View style={[styles.pill, { backgroundColor: t.greenSoft }]}><Icon name="shield" size={15} color={t.green} /><ThemedText type="small" style={{ color: t.green, fontSize: 12 }}>On-device</ThemedText></View>}
+          {desktop && <View style={[styles.pill, { backgroundColor: t.greenSoft }]}><Icon name="shield" size={15} color={t.green} /><ThemedText type="small" style={{ color: t.green, fontSize: 13 }}>Works offline</ThemedText></View>}
           <Pressable accessibilityRole="button" accessibilityLabel={`Switch to ${t.dark ? 'light' : 'dark'} mode`} onPress={t.toggle} style={({ pressed }) => [styles.theme, { borderColor: t.line, opacity: pressed ? .65 : 1 }]}><Icon name={t.dark ? 'sun' : 'moon'} color={t.textSecondary} /></Pressable>
         </View>
+      </View>
+      <View style={styles.ribbon} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+        <View style={{ flex: 5, backgroundColor: t.teal }} /><View style={{ flex: 3, backgroundColor: t.yellow }} /><View style={{ flex: 1, backgroundColor: t.orange }} />
       </View>
     </SafeAreaView>
     <TabSlot style={styles.slot} />
@@ -51,11 +53,13 @@ export default function AppTabs() {
   </Tabs>;
 }
 const styles = StyleSheet.create({
-  page: { flex: 1 }, slot: { flex: 1, minHeight: 0 }, header: { width: '100%', maxWidth: 1408, alignSelf: 'center', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap', paddingVertical: 8 },
-  brand: { flexDirection: 'row', alignItems: 'center', gap: 7, minHeight: 48 }, brandIcon: { width: 40, height: 40, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
-  brandText: { fontSize: 27, fontWeight: '800', letterSpacing: -1.2 }, nav: { flexDirection: 'row', gap: 8 }, actions: { flexDirection: 'row', gap: 7, alignItems: 'center' },
+  page: { flex: 1 }, slot: { flex: 1, minHeight: 0 },
+  // No flexWrap: a wrapped row aligns its line to the top, which left the logo and buttons hugging the top edge.
+  header: { width: '100%', maxWidth: 1408, alignSelf: 'center', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  brand: { flexDirection: 'row', alignItems: 'center', minHeight: 48, flexShrink: 1 },
+  ribbon: { height: 4, flexDirection: 'row' }, nav: { flexDirection: 'row', gap: 6 }, actions: { flexDirection: 'row', gap: 8, alignItems: 'center' },
   pill: { minHeight: 40, paddingHorizontal: 11, borderRadius: 999, flexDirection: 'row', alignItems: 'center', gap: 5 },
-  theme: { width: 48, height: 48, borderWidth: 1, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  theme: { width: 44, height: 44, borderWidth: 1, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   tab: { minHeight: 48, cursor: 'pointer', borderRadius: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 17, gap: 9 },
   mobileTab: { flex: 1, flexDirection: 'column', gap: 3, minHeight: 53, marginHorizontal: 6, paddingVertical: 6 },
   bottom: { flexDirection: 'row', paddingTop: 9, paddingHorizontal: 20, borderTopWidth: 1 },

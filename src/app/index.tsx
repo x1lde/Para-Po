@@ -24,7 +24,7 @@ export default function HomeScreen() {
           <View style={styles.postcard}><Image source={artwork.landmark} style={{ flex: 1, width: '100%' }} contentFit="cover" /><ThemedText type="small" style={styles.postcardLabel}>Find your familiar.</ThemedText></View>
           <View style={[styles.invitationCopy, { maxWidth: wide ? 215 : width < 360 ? 170 : 205 }]}><Icon name="scan" color={t.onHero} /><ThemedText style={[styles.scanTitle, { color: t.onHero }]}>Start with{'\n'}what you see.</ThemedText>
             <ThemedText type="small" style={{ color: t.heroSecondary }}>A landmark is all you need.</ThemedText>
-            <Button icon="camera" onPress={() => router.navigate('/camera')}>Scan a landmark</Button>
+            <Button icon="camera" brand onPress={() => router.navigate('/camera')}>Scan a landmark</Button>
           </View>
         </View>
         <Card><View style={ui.row}><Icon name="compass" /><ThemedText style={[styles.cardTitle, { flex: 1 }]}>Let’s plan your ride</ThemedText><Pressable accessibilityRole="button" accessibilityLabel="Swap places" disabled={!originId && !destinationId} accessibilityState={{ disabled: !originId && !destinationId }} onPress={() => { setOriginId(destinationId); setDestinationId(originId); }} style={({ pressed }) => [styles.swap, { backgroundColor: t.backgroundSelected, opacity: !originId && !destinationId ? .45 : pressed ? .65 : 1 }]}><Icon name="swap" /></Pressable></View>
@@ -41,9 +41,9 @@ export default function HomeScreen() {
       <View style={{ flex: wide ? 1 : undefined, width: wide ? undefined : '100%', minWidth: 0 }}><IllustratedMap expanded={!wide} /></View>
     </View>
     <View style={[styles.bottom, wide && styles.wide]}>
-      <Card style={{ flex: 1 }}><ThemedText style={styles.cardTitle}>Your city. Your everyday rides.</ThemedText><ThemedText type="small" themeColor="textSecondary">Start with our Circuit–One Ayala bus guidance.</ThemedText>
-        <View style={styles.vehicles}>{(['jeepney', 'ejeep', 'tricycle', 'bus'] as const).map((mode, i) => <View key={mode} style={styles.vehicle}><Art name={mode} size={51} /><ThemedText type="small">{['Jeepney', 'E-jeep', 'Tricycle', 'Bus'][i]}</ThemedText></View>)}</View>
-        <ThemedText type="small" themeColor="textSecondary">Other vehicle types are shown for familiarity; route coverage is currently limited to the bundled bus journeys.</ThemedText>
+      <Card style={{ flex: 1 }}><ThemedText style={styles.cardTitle}>Your city. Your everyday rides.</ThemedText><ThemedText type="small" themeColor="textSecondary">Jeepneys, buses, P2Ps and short walks between {pilotDataset.landmarks.length} familiar Makati landmarks.</ThemedText>
+        <View style={styles.vehicles}>{(['jeepney', 'ejeep', 'bus', 'pin'] as const).map((mode, i) => <View key={mode} style={styles.vehicle}><Art name={mode} size={51} /><ThemedText type="small">{['Jeepney', 'E-jeep', 'Bus & P2P', 'Walk'][i]}</ThemedText></View>)}</View>
+        <ThemedText type="small" themeColor="textSecondary">Routes come from OpenStreetMap community data. Check the signboard before you board.</ThemedText>
       </Card>
       <Pressable accessibilityRole="button" onPress={() => router.navigate('/explore')} style={({ pressed }) => [{ flex: 1, opacity: pressed ? .7 : 1 }]}><Card style={[styles.guide, { flex: 1 }]}><View style={[styles.star, { backgroundColor: t.goldSoft }]}><Art name="star" size={45} /></View><View style={{ flex: 1 }}><ThemedText style={styles.cardTitle}>A little more familiar.</ThemedText><ThemedText type="small" themeColor="textSecondary">Explore {pilotDataset.landmarks.length} supported Makati landmarks.</ThemedText></View><Icon name="external" size={19} /></Card></Pressable>
     </View>
