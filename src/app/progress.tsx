@@ -1,12 +1,12 @@
 import { StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 
-import { AppIcon, BodyText, Card, Kicker, RecoveryLink, ScreenFrame, typography, useAppColors } from '@/components/commuter-ui';
+import { AppIcon, Badge, BodyText, Card, CardHeader, CardTitle, Kicker, ProgressBar, RecoveryLink, ScreenFrame, Separator, typography, useAppColors } from '@/components/commuter-ui';
 import { Radius, Space } from '@/constants/theme';
 
 const badges = [
-  { icon: 'destination', title: 'First landmark', copy: 'Confirm your first useful landmark.' },
-  { icon: 'wifiOff', title: 'Offline ride', copy: 'Complete a qualifying trip while offline.' },
-  { icon: 'map', title: 'Five landmarks', copy: 'Confirm five distinct landmarks.' },
+  { icon: 'destination', tone: 'gold', title: 'First landmark', copy: 'Confirm your first useful landmark.' },
+  { icon: 'wifiOff', tone: 'primary', title: 'Offline ride', copy: 'Complete a qualifying trip while offline.' },
+  { icon: 'map', tone: 'success', title: 'Five landmarks', copy: 'Confirm five distinct landmarks.' },
 ] as const;
 
 export default function ProgressScreen() {
@@ -25,26 +25,32 @@ export default function ProgressScreen() {
         <View style={[styles.overview, wide ? styles.overviewWide : null]}>
           <View style={wide ? styles.overviewPaneWide : null}>
             <Card accent>
-              <View style={styles.levelRow}>
-                <View style={[styles.levelIcon, { backgroundColor: colors.surfaceRaised }]}>
-                  <AppIcon name="leaf" size={24} color={colors.primary} />
+              <CardHeader>
+                <View style={styles.levelIdentity}>
+                  <View style={[styles.levelIcon, { backgroundColor: colors.surfaceRaised }]}>
+                    <AppIcon name="leaf" size={24} color={colors.primary} />
+                  </View>
+                  <View style={styles.levelCopy}>
+                    <CardTitle>Your commuter profile</CardTitle>
+                    <BodyText>Level and points aren&apos;t available yet.</BodyText>
+                  </View>
                 </View>
-                <View style={styles.levelCopy}>
-                  <Text style={[styles.levelTitle, { color: colors.text }]}>Your commuter profile</Text>
-                  <BodyText>Level and points aren’t available yet.</BodyText>
-                </View>
-                <Text style={[styles.levelNumber, { color: colors.textSecondary }]}>—</Text>
-              </View>
+                <Badge variant="outline" icon="leaf">Level —</Badge>
+              </CardHeader>
+              <ProgressBar value={0} label="Commuter level progress" />
+              <Text style={[typography.small, { color: colors.textSecondary }]}>
+                Progress saving and Manila-timezone streak tracking aren&apos;t connected.
+              </Text>
             </Card>
           </View>
           <View style={wide ? styles.overviewPaneWide : null}>
             <Card>
-              <View style={[styles.statsRow, { borderTopColor: colors.border }]}>
-                <Stat label="Daily streak" value="—" />
-                <Stat label="Completed trips" value="—" />
-                <Stat label="Landmarks" value="—" />
-              </View>
-              <BodyText>Progress saving and Manila-timezone streak tracking aren’t connected.</BodyText>
+              <StatRow icon="flame" label="Daily streak" value="—" />
+              <Separator />
+              <StatRow icon="route" label="Completed trips" value="—" />
+              <Separator />
+              <StatRow icon="map" label="Landmarks" value="—" />
+              <BodyText>Progress saving and Manila-timezone streak tracking aren&apos;t connected.</BodyText>
             </Card>
           </View>
         </View>
@@ -69,29 +75,33 @@ export default function ProgressScreen() {
   );
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
+function StatRow({ icon, label, value }: { icon: 'flame' | 'route' | 'map'; label: string; value: string }) {
   const colors = useAppColors();
   return (
-    <View style={styles.stat}>
-      <Text style={[styles.statValue, { color: colors.text }]}>{value}</Text>
-      <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{label}</Text>
+    <View style={styles.statRow}>
+      <View style={[styles.statIcon, { backgroundColor: colors.backgroundSelected }]}>
+        <AppIcon name={icon} size={18} color={colors.primary} />
+      </View>
+      <Text style={[styles.statLabel, { color: colors.text }]}>{label}</Text>
+      <Text style={[typography.title, styles.statValue, { color: colors.textSecondary }]}>{value}</Text>
     </View>
   );
 }
 
 function BadgeCard({ badge }: { badge: (typeof badges)[number] }) {
   const colors = useAppColors();
+  const tone = badge.tone === 'gold' ? colors.gold : badge.tone === 'success' ? colors.success : colors.primary;
   return (
     <Card>
       <View style={styles.badgeRow}>
-        <View style={[styles.badgeIcon, { backgroundColor: colors.backgroundSelected }]}>
-          <AppIcon name={badge.icon} size={20} color={colors.plum} />
+        <View style={[styles.badgeIcon, { backgroundColor: `${tone}1A` }]}>
+          <AppIcon name={badge.icon} size={20} color={tone} />
         </View>
         <View style={styles.badgeCopy}>
           <Text style={[styles.badgeTitle, { color: colors.text }]}>{badge.title}</Text>
           <BodyText>{badge.copy}</BodyText>
         </View>
-        <Text style={[styles.unavailable, { color: colors.textSecondary }]}>Unavailable</Text>
+        <Badge variant="outline">Up next</Badge>
       </View>
     </Card>
   );
@@ -103,15 +113,13 @@ const styles = StyleSheet.create({
   overview: { gap: Space.three },
   overviewWide: { flexDirection: 'row', alignItems: 'stretch' },
   overviewPaneWide: { flex: 1, minWidth: 0 },
-  levelRow: { flexDirection: 'row', alignItems: 'center', gap: Space.three },
+  levelIdentity: { flexDirection: 'row', alignItems: 'center', gap: Space.three, flex: 1, minWidth: 0 },
   levelIcon: { width: 50, height: 50, borderRadius: Radius.medium, alignItems: 'center', justifyContent: 'center' },
-  levelCopy: { flex: 1, gap: Space.one },
-  levelTitle: { fontSize: 17, lineHeight: 22, fontWeight: '700' },
-  levelNumber: { fontSize: 24, lineHeight: 30, fontWeight: '700' },
-  statsRow: { borderTopWidth: 1, paddingTop: Space.three, flexDirection: 'row', flexWrap: 'wrap', gap: Space.two },
-  stat: { flex: 1, minWidth: 86, alignItems: 'flex-start', gap: Space.one },
-  statValue: { fontSize: 23, lineHeight: 28, fontWeight: '800' },
-  statLabel: { fontSize: 12, lineHeight: 17, fontWeight: '600' },
+  levelCopy: { flex: 1, minWidth: 0, gap: Space.one },
+  statRow: { flexDirection: 'row', alignItems: 'center', gap: Space.three, minHeight: 48 },
+  statIcon: { width: 36, height: 36, borderRadius: Radius.medium, alignItems: 'center', justifyContent: 'center' },
+  statLabel: { flex: 1, fontSize: 15, lineHeight: 20, fontWeight: '600' },
+  statValue: { textAlign: 'right' },
   badgesHeading: { paddingTop: Space.three, flexDirection: 'row', alignItems: 'center', gap: Space.two },
   badgesGrid: { gap: Space.three },
   badgesGridWide: { flexDirection: 'row', flexWrap: 'wrap' },
@@ -120,7 +128,6 @@ const styles = StyleSheet.create({
   optionalLabel: { fontSize: 12, lineHeight: 16, fontWeight: '700' },
   badgeRow: { flexDirection: 'row', alignItems: 'center', gap: Space.three },
   badgeIcon: { width: 44, height: 44, borderRadius: Radius.medium, alignItems: 'center', justifyContent: 'center' },
-  badgeCopy: { flex: 1, gap: Space.one },
+  badgeCopy: { flex: 1, minWidth: 0, gap: Space.one },
   badgeTitle: { fontSize: 15, lineHeight: 20, fontWeight: '700' },
-  unavailable: { fontSize: 11, lineHeight: 15, fontWeight: '700', maxWidth: 70, textAlign: 'right' },
 });
