@@ -10,8 +10,8 @@ Latest access follow-up: [circuit-access-research.md](./circuit-access-research.
 
 | Item | Worksheet value | Evidence / remaining gap |
 | --- | --- | --- |
-| Origin | `ayala-malls-circuit` | Existing user-supplied landmark. |
-| Destination | `one-ayala` | Existing destination candidate. |
+| Origin | `ayala_malls_circuit` | Existing user-supplied landmark. |
+| Destination | `one_ayala` | Existing destination candidate. |
 | Directional route | `circuit-p2p-to-one-ayala` | Research identifier; not an official route number. |
 | Vehicle | Bus, described as P2P | April 2026 report. Exact signboard wording still pending. |
 | Board | `circuit-cityflats-p2p-loading`: The CityFlats Circuit | Published loading point; exact curb and GPS coordinates unknown. |

@@ -24,7 +24,7 @@ import { lookupTransportation } from '@/features/transport/services/transport-se
 // Run inside the UI's loading/retry/error flow; this example is not a screen.
 const origins = await listLandmarks();
 const destinations = await listDestinations();
-const result = await lookupTransportation('ayala-malls-circuit', 'one-ayala');
+const result = await lookupTransportation('ayala_malls_circuit', 'one_ayala');
 ```
 
 ## Result handling
@@ -56,6 +56,10 @@ Database failures must be caught and shown as storage/loading errors with retry.
 
 Missing text is null; never generate directions to fill it. Missing coordinates are a null pair. `classificationLabel` can be null for manual selection, so UI must not assume it is already an ML class.
 
+Landmark and destination IDs now use underscores: for example, `ayala_malls_circuit`, `one_ayala`, and `sm_makati`. Dataset 4 atomically replaces older bundled catalogs and their foreign-key references on initialization; no schema change or reinstall is required. Update any cached selections or integration code using the old dashed place IDs. Route and boarding-point IDs retain their existing values, as they are not ML classes. Map defaults, site references, worksheets, and lookup examples use the new place IDs.
+
+This changes separators only, not the wording of place identifiers. The exact exported model label list is still needed to populate `classificationLabel` and confirm a label-to-landmark mapping; no model label order or class membership is assumed. If inference returns these exact canonical place IDs, pass the recognized ID to `findLandmark` or `lookupTransportation` after handling unknown/low-confidence results.
+
 The issue `boarding-coordinates-unavailable` alone does not block a ready manual recommendation. The location/maps teammate must skip distance ranking for those points. All other issue codes block ready guidance. `isGuidanceReady()` in the guidance service is the shared rule if consuming lower-level repository options.
 
 ## Current expected outcomes (not executed tests)
@@ -66,6 +70,6 @@ The issue `boarding-coordinates-unavailable` alone does not block a ready manual
 - Uncovered pairs such as RCBC Plaza to Power Plant Mall return `no-routes`.
 - Same-ID selections return `already-at-destination` after validating both IDs.
 - Invalid IDs return their respective unsupported status.
-- Dataset metadata is version 3; schema is version 3.
+- Dataset metadata is version 4; schema is version 3.
 
 See [web recommendations](./data/web-recommendations.md) for the six bundled suggestions and presentation requirements. Refer to the deferred verification checklist before Android demonstration.

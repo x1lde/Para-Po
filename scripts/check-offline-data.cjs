@@ -92,29 +92,29 @@ async function main() {
       assert.deepEqual(db.raw.prepare('PRAGMA foreign_key_check').all(), []);
     });
     await check('all six sourced combinations and strict-mode behavior', async () => {
-      for (const destination of ['one-ayala', 'sm-makati', 'glorietta', 'landmark-makati', 'greenbelt']) {
-        const result = await lookupTransportation('ayala-malls-circuit', destination);
+      for (const destination of ['one_ayala', 'sm_makati', 'glorietta', 'landmark_makati', 'greenbelt']) {
+        const result = await lookupTransportation('ayala_malls_circuit', destination);
         assert.equal(result.status, 'source-based');
         assert(result.options.every((option) => option.route.destinationId === destination));
         assert(result.options.every((option) => option.boardingPoint.latitude === null && !option.accessVerified));
-        assert.equal((await lookupTransportation('ayala-malls-circuit', destination, false)).status, 'incomplete-guidance');
+        assert.equal((await lookupTransportation('ayala_malls_circuit', destination, false)).status, 'incomplete-guidance');
       }
-      assert.equal((await lookupTransportation('one-ayala', 'ayala-malls-circuit')).status, 'source-based');
-      assert.equal((await repo.listDestinationsForOrigin('ayala-malls-circuit')).length, 5);
-      assert.deepEqual(await repo.listDestinationsForOrigin('ayala-malls-circuit', false), []);
-      assert.equal((await repo.listDestinationsForOrigin('one-ayala')).length, 1);
+      assert.equal((await lookupTransportation('one_ayala', 'ayala_malls_circuit')).status, 'source-based');
+      assert.equal((await repo.listDestinationsForOrigin('ayala_malls_circuit')).length, 5);
+      assert.deepEqual(await repo.listDestinationsForOrigin('ayala_malls_circuit', false), []);
+      assert.equal((await repo.listDestinationsForOrigin('one_ayala')).length, 1);
     });
     await check('uncovered, same-place, invalid and SQL-like IDs', async () => {
-      assert.equal((await lookupTransportation('rcbc-plaza', 'powerplant-mall')).status, 'no-routes');
-      assert.equal((await lookupTransportation('one-ayala', 'one-ayala')).status, 'already-at-destination');
-      assert.equal((await lookupTransportation('missing', 'one-ayala')).status, 'unsupported-origin');
-      assert.equal((await lookupTransportation('one-ayala', 'missing')).status, 'unsupported-destination');
-      assert.equal((await lookupTransportation("one-ayala' OR 1=1 --", 'one-ayala')).status, 'unsupported-origin');
+      assert.equal((await lookupTransportation('rcbc_plaza', 'powerplant_mall')).status, 'no-routes');
+      assert.equal((await lookupTransportation('one_ayala', 'one_ayala')).status, 'already-at-destination');
+      assert.equal((await lookupTransportation('missing', 'one_ayala')).status, 'unsupported-origin');
+      assert.equal((await lookupTransportation('one_ayala', 'missing')).status, 'unsupported-destination');
+      assert.equal((await lookupTransportation("one_ayala' OR 1=1 --", 'one_ayala')).status, 'unsupported-origin');
     });
     await check('same-version seed does not replace installed data', async () => {
-      db.raw.exec("UPDATE landmarks SET name = 'TEST ONLY retained sentinel' WHERE id = 'one-ayala'");
+      db.raw.exec("UPDATE landmarks SET name = 'TEST ONLY retained sentinel' WHERE id = 'one_ayala'");
       await db.withTransactionAsync(() => seedDatabase(db, bundledDataset));
-      assert.equal((await repo.findLandmark('one-ayala')).name, 'TEST ONLY retained sentinel');
+      assert.equal((await repo.findLandmark('one_ayala')).name, 'TEST ONLY retained sentinel');
     });
     await check('invalid dataset validation rejects before replacement', async () => {
       const invalid = structuredClone(bundledDataset);
@@ -141,7 +141,7 @@ async function main() {
       await assert.rejects(db.withTransactionAsync(() => seedDatabase(db, changed)), /forced failure/);
       db.raw.exec('DROP TRIGGER test_seed_failure');
       assert.equal((await repo.getDatasetMetadata()).version, bundledDataset.version);
-      assert.equal((await repo.findLandmark('one-ayala')).name, 'TEST ONLY retained sentinel');
+      assert.equal((await repo.findLandmark('one_ayala')).name, 'TEST ONLY retained sentinel');
       assert.equal(db.raw.prepare('SELECT count(*) AS n FROM transportation_routes').get().n, 6);
     });
     await check('complete manual option with null coordinates beats sourced alternatives', async () => {
@@ -152,15 +152,15 @@ async function main() {
         FROM transportation_routes WHERE id = 'circuit-p2p-to-one-ayala';
         INSERT INTO route_boarding_points VALUES ('test-alternative', 'circuit-cityflats-p2p-loading', 0, 'TEST ONLY boarding', 0);
         UPDATE route_boarding_points SET boarding_verified = 1 WHERE route_id = 'circuit-p2p-to-one-ayala';
-        UPDATE landmark_boarding_points SET access_verified = 1, walking_instructions = 'TEST ONLY reviewed access' WHERE landmark_id = 'ayala-malls-circuit';
+        UPDATE landmark_boarding_points SET access_verified = 1, walking_instructions = 'TEST ONLY reviewed access' WHERE landmark_id = 'ayala_malls_circuit';
         UPDATE transportation_routes SET destination_walking_instructions = 'TEST ONLY arrival access' WHERE id = 'circuit-p2p-to-one-ayala';
       `);
-      const result = await lookupTransportation('ayala-malls-circuit', 'one-ayala', false);
+      const result = await lookupTransportation('ayala_malls_circuit', 'one_ayala', false);
       assert.equal(result.status, 'available');
       assert.deepEqual(result.options.map((option) => option.route.id), ['circuit-p2p-to-one-ayala']);
       assert.deepEqual(result.options[0].guidanceIssues, ['boarding-coordinates-unavailable']);
-      assert.equal((await lookupTransportation('ayala-malls-circuit', 'sm-makati')).status, 'source-based');
-      assert.equal((await repo.listDestinationsForOrigin('ayala-malls-circuit', false)).length, 1);
+      assert.equal((await lookupTransportation('ayala_malls_circuit', 'sm_makati')).status, 'source-based');
+      assert.equal((await repo.listDestinationsForOrigin('ayala_malls_circuit', false)).length, 1);
     });
     await check('higher dataset version removes obsolete reference routes; downgrade rejected', async () => {
       const changed = structuredClone(bundledDataset);
@@ -169,7 +169,7 @@ async function main() {
       changed.routeBoardingPoints = changed.routeBoardingPoints.filter((link) => link.routeId === changed.routes[0].id);
       await db.withTransactionAsync(() => seedDatabase(db, changed));
       assert.equal(db.raw.prepare('SELECT count(*) AS n FROM transportation_routes').get().n, 1);
-      assert.equal((await lookupTransportation('one-ayala', 'ayala-malls-circuit')).status, 'no-routes');
+      assert.equal((await lookupTransportation('one_ayala', 'ayala_malls_circuit')).status, 'no-routes');
       await assert.rejects(db.withTransactionAsync(() => seedDatabase(db, bundledDataset)), /newer/);
     });
     for (const version of [1, 2]) {
@@ -221,11 +221,49 @@ async function main() {
       assert.equal((await upgradedRepo.listDestinations()).length, 14);
       assert.equal(await upgradedRepo.findLandmark(retiredPlace.id), null);
       assert.equal(await upgradedRepo.findDestination(retiredPlace.id), null);
-      assert.equal((await upgradedService.lookupTransportation(retiredPlace.id, 'one-ayala')).status, 'unsupported-origin');
-      assert.equal((await upgradedService.lookupTransportation('one-ayala', retiredPlace.id)).status, 'unsupported-destination');
-      assert.equal((await upgradedService.lookupTransportation('ayala-malls-circuit', 'one-ayala')).status, 'source-based');
+      assert.equal((await upgradedService.lookupTransportation(retiredPlace.id, 'one_ayala')).status, 'unsupported-origin');
+      assert.equal((await upgradedService.lookupTransportation('one_ayala', retiredPlace.id)).status, 'unsupported-destination');
+      assert.equal((await upgradedService.lookupTransportation('ayala_malls_circuit', 'one_ayala')).status, 'source-based');
       assert.equal(installed.raw.prepare('SELECT count(*) AS n FROM transportation_routes').get().n, 6);
       assert.deepEqual(installed.raw.prepare('PRAGMA foreign_key_check').all(), []);
+    });
+    await check('dataset 3 upgrade replaces dashed place IDs and preserves all six journeys', async () => {
+      const installed = makeDb();
+      installed.raw.exec(schema.INITIAL_SCHEMA + schema.COMMUTER_INSTRUCTIONS_MIGRATION + schema.MANUAL_CATALOG_MIGRATION);
+      installed.raw.exec('PRAGMA foreign_keys = ON; PRAGMA user_version = 3;');
+      const oldDataset = structuredClone(bundledDataset);
+      oldDataset.version = 3;
+      const oldId = (id) => id.replaceAll('_', '-');
+      oldDataset.landmarks.forEach((place) => { place.id = oldId(place.id); });
+      oldDataset.destinations.forEach((place) => { place.id = oldId(place.id); });
+      oldDataset.routes.forEach((route) => { route.destinationId = oldId(route.destinationId); });
+      oldDataset.landmarkBoardingPoints.forEach((link) => { link.landmarkId = oldId(link.landmarkId); });
+      await installed.withTransactionAsync(() => seedDatabase(installed, oldDataset));
+      assert.equal(installed.raw.prepare("SELECT count(*) AS n FROM landmarks WHERE id = 'one-ayala'").get().n, 1);
+      const upgradedLoad = appRuntime(async () => installed);
+      const upgradedRepo = upgradedLoad('src/database/repositories/transport-repository.ts');
+      const upgradedService = upgradedLoad('src/features/transport/services/transport-service.ts');
+      const landmarks = await upgradedRepo.listLandmarks();
+      const destinations = await upgradedRepo.listDestinations();
+      assert.equal(landmarks.length, 14);
+      assert.equal(destinations.length, 14);
+      assert(landmarks.every((place) => !place.id.includes('-')));
+      assert(destinations.every((place) => !place.id.includes('-')));
+      for (const oldPlace of oldDataset.landmarks.filter((place) => place.id.includes('-'))) {
+        assert.equal(await upgradedRepo.findLandmark(oldPlace.id), null);
+        assert.equal(await upgradedRepo.findDestination(oldPlace.id), null);
+        assert(await upgradedRepo.findLandmark(oldPlace.id.replaceAll('-', '_')));
+      }
+      for (const destination of ['one_ayala', 'sm_makati', 'glorietta', 'landmark_makati', 'greenbelt']) {
+        assert.equal((await upgradedService.lookupTransportation('ayala_malls_circuit', destination)).status, 'source-based');
+      }
+      assert.equal((await upgradedService.lookupTransportation('one_ayala', 'ayala_malls_circuit')).status, 'source-based');
+      assert.equal((await upgradedRepo.getDatasetMetadata()).version, 4);
+      assert.deepEqual(installed.raw.prepare('SELECT id FROM transportation_routes ORDER BY id').all().map((row) => row.id),
+        oldDataset.routes.map((route) => route.id).sort());
+      assert.deepEqual(installed.raw.prepare('PRAGMA foreign_key_check').all(), []);
+      await installed.withTransactionAsync(() => seedDatabase(installed, bundledDataset));
+      assert.equal((await upgradedRepo.getDatasetMetadata()).version, 4);
     });
     await check('failed initialization closes connection and retries; newer schema rejected', async () => {
       const future = makeDb();
