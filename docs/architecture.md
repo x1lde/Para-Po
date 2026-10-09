@@ -11,10 +11,11 @@ Para-Po is an offline-first public transportation identifier MVP. This scaffold 
 | `src/components/ui/` | Reusable UI primitives shared across features. |
 | `src/features/recognition/components/` | Future recognition UI, such as capture controls and recognition results. |
 | `src/features/recognition/services/` | Future TensorFlow Lite model loading, input preparation, inference, and result mapping. |
-| `src/features/location/services/` | Future Expo Location permission handling, position retrieval, and location subscriptions. |
+| `src/features/location/services/` | Foreground location permission, bounded GPS fix, quality checks, and eligible boarding-point straight-line ranking. |
 | `src/features/transport/components/` | Future transport information cards, lists, and details. |
 | `src/features/transport/services/` | Offline transport lookup and explicit guidance completeness checks. |
-| `src/features/maps/components/` | Future MapLibre map presentation, markers, and overlays. |
+| `src/features/maps/components/` | MapLibre native rendering, markers, sourced overlays, and offline/error/platform fallbacks. |
+| `src/features/maps/services/` | Validate/map lookup coordinates and accept sourced route geometry; no route generation. |
 | `src/database/` | Expo SQLite initialization, schema, migrations, dataset validation, and bundled catalog data. |
 | `src/database/repositories/` | Typed catalog and transport access. Keep SQL and persistence details out of UI components. |
 | `src/hooks/` | Shared React hooks; retain the existing theme and color scheme hooks. Keep feature-specific hooks with their feature when needed. |
@@ -45,6 +46,8 @@ Start each branch from the team's agreed integration branch. Keep changes focuse
 
 ## Integration conventions
 
+The optional Map tab is implemented on `features/map`; see [maps.md](./maps.md) for native-build requirements, provider attribution, offline fallback, and frontend integration. GPS and real route geometry remain separate work.
+
 The concrete handoff is in [branch-integration.md](./branch-integration.md), including ownership, UI wiring, source-based presentation, and cross-branch verification.
 
 - Preserve the strict TypeScript configuration and existing aliases: `@/*` resolves to `src/*`; `@/assets/*` resolves to `assets/*`.
@@ -54,5 +57,6 @@ The concrete handoff is in [branch-integration.md](./branch-integration.md), inc
 - Keep database access and inference work away from rendering code. Design future implementations for mobile performance and supported platforms.
 - Offline recognition and transport lookup should use bundled or persisted resources. Location and map availability must be handled explicitly; an offline-first application does not imply offline map coverage without real map resources.
 - Offline-data bundles a 14-place catalog and six source-based suggestions using two published vehicle legs plus four walking variants. Evidence and missing details stay explicit. Nullable labels and coordinates allow manual use without ML or guessed points. See [offline-data.md](./offline-data.md) for schema 3, dataset 3, and UI handoff; complete guidance remains a separate result standard. Screens, inference, GPS, and maps belong to their branches.
+- The UI provides a Para-Po home screen, a Map tab at `/map`, and a searchable commuter guide at `/explore`. Guide content in `src/features/transport/commuter-guide.ts` is general boarding advice, not verified route or fare data. Recognition models remain unimplemented in this checkout. Intended technologies do not imply that every dependency is already installed or configured.
 - Before future Expo, EAS, or React Native API changes, follow `AGENTS.md` and consult the documentation matching the installed Expo SDK. Add dependencies separately using Expo-compatible installation commands.
 - Run TypeScript and lint checks before merging each branch, and distinguish existing failures from regressions introduced by that branch.

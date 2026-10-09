@@ -1,180 +1,107 @@
-import { Image } from 'expo-image';
-import { SymbolView } from 'expo-symbols';
-import { Platform, Pressable, ScrollView, StyleSheet } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useState } from 'react';
+import { Keyboard, Pressable, StyleSheet, TextInput, View } from 'react-native';
 
-import { ExternalLink } from '@/components/external-link';
+import { Screen } from '@/components/screen';
 import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
 import { Collapsible } from '@/components/ui/collapsible';
-import { WebBadge } from '@/components/web-badge';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
+import { Fonts, Spacing } from '@/constants/theme';
+import { commuterGuide } from '@/features/transport/commuter-guide';
 import { useTheme } from '@/hooks/use-theme';
 
-export default function TabTwoScreen() {
-  const safeAreaInsets = useSafeAreaInsets();
-  const insets = {
-    ...safeAreaInsets,
-    bottom: safeAreaInsets.bottom + BottomTabInset + Spacing.three,
-  };
+export default function GuideScreen() {
   const theme = useTheme();
-
-  const contentPlatformStyle = Platform.select({
-    android: {
-      paddingTop: insets.top,
-      paddingLeft: insets.left,
-      paddingRight: insets.right,
-      paddingBottom: insets.bottom,
-    },
-    web: {
-      paddingTop: Spacing.six,
-      paddingBottom: Spacing.four,
-    },
+  const [query, setQuery] = useState('');
+  const terms = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  const entries = commuterGuide.filter((entry) => {
+    const searchable = `${entry.title} ${entry.summary} ${entry.keywords} ${entry.tips.map((tip) => `${tip.title} ${tip.text}`).join(' ')}`.toLowerCase();
+    return terms.every((term) => searchable.includes(term));
   });
 
   return (
-    <ScrollView
-      style={[styles.scrollView, { backgroundColor: theme.background }]}
-      contentInset={insets}
-      contentContainerStyle={[styles.contentContainer, contentPlatformStyle]}>
-      <ThemedView style={styles.container}>
-        <ThemedView style={styles.titleContainer}>
-          <ThemedText type="subtitle">Explore</ThemedText>
-          <ThemedText style={styles.centerText} themeColor="textSecondary">
-            This starter app includes example{'\n'}code to help you get started.
-          </ThemedText>
+    <Screen>
+      <View style={styles.intro}>
+        <ThemedText type="smallBold" themeColor="accent" style={styles.eyebrow}>A HANDY TRAVEL COMPANION</ThemedText>
+        <ThemedText type="title" accessibilityRole="header">Commuter guide</ThemedText>
+        <ThemedText themeColor="textSecondary">Choose your ride for a few helpful tips before you board.</ThemedText>
+      </View>
 
-          <ExternalLink href="https://docs.expo.dev" asChild>
-            <Pressable style={({ pressed }) => pressed && styles.pressed}>
-              <ThemedView type="backgroundElement" style={styles.linkButton}>
-                <ThemedText type="link">Expo documentation</ThemedText>
-                <SymbolView
-                  tintColor={theme.text}
-                  name={{ ios: 'arrow.up.right.square', android: 'link', web: 'link' }}
-                  size={12}
-                />
-              </ThemedView>
+      <View style={styles.searchSection}>
+        <ThemedText type="smallBold" nativeID="guide-search-label">Search the guide</ThemedText>
+        <View style={[styles.searchBox, { backgroundColor: theme.backgroundElement, borderColor: theme.accent }]}>
+          <TextInput
+            accessibilityLabel="Search the guide"
+            accessibilityLabelledBy="guide-search-label"
+            placeholder="Try jeepney, train, or fare"
+            placeholderTextColor={theme.textSecondary}
+            value={query}
+            onChangeText={setQuery}
+            autoCorrect={false}
+            autoCapitalize="none"
+            returnKeyType="search"
+            onSubmitEditing={() => Keyboard.dismiss()}
+            style={[styles.input, { color: theme.text }]}
+          />
+          {query.length > 0 ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Clear search"
+              onPress={() => setQuery('')}
+              style={({ pressed }) => [styles.clear, pressed && styles.pressed]}>
+              <ThemedText type="smallBold" themeColor="accent">Clear</ThemedText>
             </Pressable>
-          </ExternalLink>
-        </ThemedView>
+          ) : null}
+        </View>
+        <ThemedText type="small" themeColor="textSecondary" accessibilityLiveRegion="polite" role="status">
+          {terms.length ? `${entries.length} ${entries.length === 1 ? 'guide' : 'guides'} found` : '4 transport guides · Tap a card to read'}
+        </ThemedText>
+      </View>
 
-        <ThemedView style={styles.sectionsWrapper}>
-          <Collapsible title="File-based routing">
-            <ThemedText type="small">
-              This app has two screens: <ThemedText type="code">src/app/index.tsx</ThemedText> and{' '}
-              <ThemedText type="code">src/app/explore.tsx</ThemedText>
-            </ThemedText>
-            <ThemedText type="small">
-              The layout file in <ThemedText type="code">src/app/_layout.tsx</ThemedText> sets up
-              the tab navigator.
-            </ThemedText>
-            <ExternalLink href="https://docs.expo.dev/router/introduction">
-              <ThemedText type="linkPrimary">Learn more</ThemedText>
-            </ExternalLink>
+      <View style={styles.entries}>
+        {entries.map((entry) => (
+          <Collapsible key={entry.id} title={entry.title} summary={entry.summary}>
+            {entry.tips.map((tip) => (
+              <View key={tip.title} style={styles.tip}>
+                <ThemedText style={styles.tipTitle}>{tip.title}</ThemedText>
+                <ThemedText themeColor="textSecondary">{tip.text}</ThemedText>
+              </View>
+            ))}
           </Collapsible>
+        ))}
+        {entries.length === 0 ? (
+          <View style={[styles.empty, { backgroundColor: theme.backgroundElement, borderColor: theme.border }]}>
+            <ThemedText style={styles.emptyTitle}>No matching guides</ThemedText>
+            <ThemedText themeColor="textSecondary">Try a transport type like “bus” or a topic like “ticket”. This guide does not search routes or destinations.</ThemedText>
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => { setQuery(''); Keyboard.dismiss(); }}
+              style={({ pressed }) => [styles.reset, { backgroundColor: theme.accent }, pressed && styles.pressed]}>
+              <ThemedText themeColor="onAccent" style={styles.tipTitle}>Show all guides</ThemedText>
+            </Pressable>
+          </View>
+        ) : null}
+      </View>
 
-          <Collapsible title="Android, iOS, and web support">
-            <ThemedView type="backgroundElement" style={styles.collapsibleContent}>
-              <ThemedText type="small">
-                You can open this project on Android, iOS, and the web. To open the web version,
-                press <ThemedText type="smallBold">w</ThemedText> in the terminal running this
-                project.
-              </ThemedText>
-              <Image
-                source={require('@/assets/images/tutorial-web.png')}
-                style={styles.imageTutorial}
-              />
-            </ThemedView>
-          </Collapsible>
-
-          <Collapsible title="Images">
-            <ThemedText type="small">
-              For static images, you can use the <ThemedText type="code">@2x</ThemedText> and{' '}
-              <ThemedText type="code">@3x</ThemedText> suffixes to provide files for different
-              screen densities.
-            </ThemedText>
-            <Image source={require('@/assets/images/react-logo.png')} style={styles.imageReact} />
-            <ExternalLink href="https://reactnative.dev/docs/images">
-              <ThemedText type="linkPrimary">Learn more</ThemedText>
-            </ExternalLink>
-          </Collapsible>
-
-          <Collapsible title="Light and dark mode components">
-            <ThemedText type="small">
-              This template has light and dark mode support. The{' '}
-              <ThemedText type="code">useColorScheme()</ThemedText> hook lets you inspect what the
-              user&apos;s current color scheme is, and so you can adjust UI colors accordingly.
-            </ThemedText>
-            <ExternalLink href="https://docs.expo.dev/develop/user-interface/color-themes/">
-              <ThemedText type="linkPrimary">Learn more</ThemedText>
-            </ExternalLink>
-          </Collapsible>
-
-          <Collapsible title="Animations">
-            <ThemedText type="small">
-              This template includes an example of an animated component. The{' '}
-              <ThemedText type="code">src/components/ui/collapsible.tsx</ThemedText> component uses
-              the powerful <ThemedText type="code">react-native-reanimated</ThemedText> library to
-              animate opening this hint.
-            </ThemedText>
-          </Collapsible>
-        </ThemedView>
-        {Platform.OS === 'web' && <WebBadge />}
-      </ThemedView>
-    </ScrollView>
+      <View style={[styles.reminder, { backgroundColor: theme.backgroundSelected }]}>
+        <ThemedText style={styles.tipTitle}>When in doubt, ask before boarding.</ThemedText>
+        <ThemedText themeColor="textSecondary">These are general tips, not verified route or fare information. Confirm your destination, fare, and unloading point with the driver or station staff.</ThemedText>
+      </View>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  scrollView: {
-    flex: 1,
-  },
-  contentContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-  },
-  container: {
-    maxWidth: MaxContentWidth,
-    flexGrow: 1,
-  },
-  titleContainer: {
-    gap: Spacing.three,
-    alignItems: 'center',
-    paddingHorizontal: Spacing.four,
-    paddingVertical: Spacing.six,
-  },
-  centerText: {
-    textAlign: 'center',
-  },
-  pressed: {
-    opacity: 0.7,
-  },
-  linkButton: {
-    flexDirection: 'row',
-    paddingHorizontal: Spacing.four,
-    paddingVertical: Spacing.two,
-    borderRadius: Spacing.five,
-    justifyContent: 'center',
-    gap: Spacing.one,
-    alignItems: 'center',
-  },
-  sectionsWrapper: {
-    gap: Spacing.five,
-    paddingHorizontal: Spacing.four,
-    paddingTop: Spacing.three,
-  },
-  collapsibleContent: {
-    alignItems: 'center',
-  },
-  imageTutorial: {
-    width: '100%',
-    aspectRatio: 296 / 171,
-    borderRadius: Spacing.three,
-    marginTop: Spacing.two,
-  },
-  imageReact: {
-    width: 100,
-    height: 100,
-    alignSelf: 'center',
-  },
+  intro: { gap: 12 },
+  eyebrow: { letterSpacing: 1, fontSize: 12 },
+  searchSection: { gap: Spacing.two },
+  searchBox: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderRadius: 14 },
+  input: { flex: 1, minWidth: 0, minHeight: 56, padding: Spacing.three, fontSize: 16, lineHeight: 24, fontFamily: Fonts.sans },
+  clear: { minWidth: 56, minHeight: 48, padding: Spacing.two, alignItems: 'center', justifyContent: 'center', borderRadius: 12 },
+  entries: { gap: 12 },
+  tip: { gap: Spacing.one },
+  tipTitle: { fontWeight: '700' },
+  reminder: { padding: Spacing.four, borderRadius: 20, gap: Spacing.two },
+  empty: { padding: Spacing.four, gap: Spacing.three, borderRadius: 20, borderWidth: 1 },
+  emptyTitle: { fontSize: 20, lineHeight: 28, fontWeight: '700' },
+  reset: { minHeight: 52, padding: Spacing.three, alignItems: 'center', justifyContent: 'center', borderRadius: 12 },
+  pressed: { opacity: 0.7 },
 });

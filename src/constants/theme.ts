@@ -19,6 +19,12 @@ export const Colors = {
     surfaceRaised: '#FFFFFF',
     scrim: 'rgba(20,18,15,0.56)',
     controlMuted: '#8B9AB0',
+    accent: '#0369A1',
+    onAccent: '#FFFFFF',
+    hero: '#0F2740',
+    onHero: '#FFFFFF',
+    heroSecondary: '#CDDFEB',
+    highlight: '#BAE6FD',
   },
   dark: {
     text: '#F3F6FC',
@@ -36,6 +42,12 @@ export const Colors = {
     surfaceRaised: '#263244',
     scrim: 'rgba(0,0,0,0.68)',
     controlMuted: '#66758C',
+    accent: '#7DD3FC',
+    onAccent: '#0F172A',
+    hero: '#152E48',
+    onHero: '#FFFFFF',
+    heroSecondary: '#CDDFEB',
+    highlight: '#BAE6FD',
   },
 } as const;
 

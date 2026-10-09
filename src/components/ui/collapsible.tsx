@@ -1,65 +1,50 @@
-import { SymbolView } from 'expo-symbols';
-import { PropsWithChildren, useState } from 'react';
-import { Pressable, StyleSheet } from 'react-native';
-import Animated, { FadeIn } from 'react-native-reanimated';
+import { type PropsWithChildren, useState } from 'react';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
-export function Collapsible({ children, title }: PropsWithChildren & { title: string }) {
+export function Collapsible({ children, title, summary }: PropsWithChildren<{ title: string; summary?: string }>) {
   const [isOpen, setIsOpen] = useState(false);
   const theme = useTheme();
-
   return (
-    <ThemedView>
+    <View style={[styles.card, { backgroundColor: theme.backgroundElement, borderColor: theme.border }]}>
       <Pressable
-        style={({ pressed }) => [styles.heading, pressed && styles.pressedHeading]}
+        accessibilityRole="button"
+        accessibilityLabel={title}
+        accessibilityHint={isOpen ? 'Hide guidance' : 'Show guidance'}
+        accessibilityState={{ expanded: isOpen }}
+        aria-expanded={isOpen}
+        style={({ pressed }) => [styles.heading, pressed && styles.pressed]}
         onPress={() => setIsOpen((value) => !value)}>
-        <ThemedView type="backgroundElement" style={styles.button}>
-          <SymbolView
-            name={{ ios: 'chevron.right', android: 'chevron_right', web: 'chevron_right' }}
-            size={14}
-            weight="bold"
-            tintColor={theme.text}
-            style={{ transform: [{ rotate: isOpen ? '-90deg' : '90deg' }] }}
-          />
-        </ThemedView>
-
-        <ThemedText type="small">{title}</ThemedText>
+        <View style={styles.labels}>
+          <ThemedText style={styles.title}>{title}</ThemedText>
+          {summary ? <ThemedText type="small" themeColor="textSecondary">{summary}</ThemedText> : null}
+        </View>
+        <View accessible={false} aria-hidden style={[styles.toggle, { backgroundColor: theme.backgroundSelected }]}>
+          <ThemedText themeColor="accent" style={styles.toggleText}>{isOpen ? '−' : '+'}</ThemedText>
+        </View>
       </Pressable>
-      {isOpen && (
-        <Animated.View entering={FadeIn.duration(200)}>
-          <ThemedView type="backgroundElement" style={styles.content}>
-            {children}
-          </ThemedView>
-        </Animated.View>
-      )}
-    </ThemedView>
+      {isOpen ? <View style={[styles.content, { borderColor: theme.border }]}>{children}</View> : null}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  card: { borderRadius: 20, borderWidth: 1 },
   heading: {
+    minHeight: 72,
+    padding: Spacing.three,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.two,
+    gap: Spacing.three,
+    borderRadius: 20,
   },
-  pressedHeading: {
-    opacity: 0.7,
-  },
-  button: {
-    width: Spacing.four,
-    height: Spacing.four,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  content: {
-    marginTop: Spacing.three,
-    borderRadius: Spacing.three,
-    marginLeft: Spacing.four,
-    padding: Spacing.four,
-  },
+  labels: { flex: 1, gap: Spacing.one },
+  title: { fontSize: 18, fontWeight: '700', lineHeight: 26 },
+  pressed: { opacity: 0.65 },
+  toggle: { minWidth: 32, minHeight: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  toggleText: { fontSize: 24, lineHeight: 28 },
+  content: { padding: Spacing.three, gap: Spacing.three, borderTopWidth: 1 },
 });
