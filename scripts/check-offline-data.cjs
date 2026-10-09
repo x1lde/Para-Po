@@ -258,12 +258,12 @@ async function main() {
         assert.equal((await upgradedService.lookupTransportation('ayala_malls_circuit', destination)).status, 'source-based');
       }
       assert.equal((await upgradedService.lookupTransportation('one_ayala', 'ayala_malls_circuit')).status, 'source-based');
-      assert.equal((await upgradedRepo.getDatasetMetadata()).version, 4);
+      assert.equal((await upgradedRepo.getDatasetMetadata()).version, bundledDataset.version);
       assert.deepEqual(installed.raw.prepare('SELECT id FROM transportation_routes ORDER BY id').all().map((row) => row.id),
         oldDataset.routes.map((route) => route.id).sort());
       assert.deepEqual(installed.raw.prepare('PRAGMA foreign_key_check').all(), []);
       await installed.withTransactionAsync(() => seedDatabase(installed, bundledDataset));
-      assert.equal((await upgradedRepo.getDatasetMetadata()).version, 4);
+      assert.equal((await upgradedRepo.getDatasetMetadata()).version, bundledDataset.version);
     });
     await check('failed initialization closes connection and retries; newer schema rejected', async () => {
       const future = makeDb();
