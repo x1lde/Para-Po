@@ -1,6 +1,8 @@
 import { Image } from 'expo-image';
 import { ScrollView, StyleSheet, View, type ViewProps } from 'react-native';
-import { Children, type ReactNode } from 'react';
+import { Children, type ReactNode, useEffect, useRef } from 'react';
+import Animated, { useAnimatedStyle, useReducedMotion, useSharedValue, withSequence, withSpring, withTiming } from 'react-native-reanimated';
+import { onScrollToTop } from './scroll-top';
 import { ThemedText } from '@/components/themed-text';
 import { Brand } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -47,12 +49,27 @@ const brand = {
   po: require('../../../assets/brand/parapo-wordmark-po.png'),
 };
 /** The ParaPo! logo from the brand board: jeepney mark + wordmark. "Para" turns light on dark backgrounds. */
-export function BrandLogo({ size = 40, wordmark = true, onDark }: { size?: number; wordmark?: boolean; onDark?: boolean }) {
+/** The logo springs in on mount, and gives a small wiggle while `hovered` is true (web). */
+export function BrandLogo({ size = 40, wordmark = true, onDark, hovered = false }: { size?: number; wordmark?: boolean; onDark?: boolean; hovered?: boolean }) {
   const t = useTheme();
+  const reduced = useReducedMotion();
   const light = onDark ?? t.dark;
   const height = Math.round(size * 0.6);
+  const markScale = useSharedValue(reduced ? 1 : .6);
+  const markTilt = useSharedValue(reduced ? 0 : -14);
+  useEffect(() => {
+    if (reduced) return;
+    markScale.value = withSpring(1, { damping: 9, stiffness: 170 });
+    markTilt.value = withSpring(0, { damping: 11, stiffness: 150 });
+  }, [reduced, markScale, markTilt]);
+  const wiggle = useSharedValue(0);
+  useEffect(() => {
+    if (reduced || !hovered) return;
+    wiggle.value = withSequence(withTiming(-8, { duration: 110 }), withTiming(6, { duration: 160 }), withSpring(0, { damping: 9, stiffness: 180 }));
+  }, [hovered, reduced, wiggle]);
+  const markStyle = useAnimatedStyle(() => ({ transform: [{ scale: markScale.value }, { rotate: `${markTilt.value + wiggle.value}deg` }] }));
   return <View style={[ui.row, { gap: Math.round(size * 0.2) }]} accessible accessibilityRole="image" accessibilityLabel="ParaPo!">
-    <Image source={brand.mark} style={{ width: size * 0.947, height: size }} contentFit="contain" />
+    <Animated.View style={markStyle}><Image source={brand.mark} style={{ width: size * 0.947, height: size }} contentFit="contain" /></Animated.View>
     {wordmark && <View style={{ flexDirection: 'row' }}>
       <Image source={brand.para} style={{ width: height * 2.156, height }} contentFit="contain" tintColor={light ? '#FFF9E9' : undefined} />
       <Image source={brand.po} style={{ width: height * 1.331, height }} contentFit="contain" />
@@ -82,7 +99,9 @@ export function Card({ style, ...props }: ViewProps) {
 }
 export function Page({ children }: { children: ReactNode }) {
   const { gutter } = useResponsiveLayout();
-  return <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={[ui.page, { paddingHorizontal: gutter }]}>
+  const scroller = useRef<ScrollView>(null);
+  useEffect(() => onScrollToTop(() => scroller.current?.scrollTo({ y: 0, animated: true })), []);
+  return <ScrollView ref={scroller} keyboardShouldPersistTaps="handled" contentContainerStyle={[ui.page, { paddingHorizontal: gutter }]}>
     <View style={ui.pageInner}>{Children.toArray(children).map((child, i) => <Reveal key={i} delay={Math.min(i, 6) * 80}>{child}</Reveal>)}<Reveal delay={Math.min(Children.count(children), 6) * 80}><Footer /></Reveal></View>
   </ScrollView>;
 }
