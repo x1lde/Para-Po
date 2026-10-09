@@ -46,6 +46,7 @@ export default function AppTabs() {
     <TabList style={{ display: 'none' }}>
       {navigation.map((tab) => <TabTrigger key={tab.name} name={tab.name} href={tab.href} />)}
       <TabTrigger name="camera" href="/camera" />
+      <TabTrigger name="progress" href="/progress" />
     </TabList>
   </Tabs>;
 }
