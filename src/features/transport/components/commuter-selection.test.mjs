@@ -5,22 +5,22 @@ import { filterOptionsByMode, getDestinationChoices } from './commuter-selection
 
 test('destination choices are available before origin selection', () => {
   const destinations = [
-    { id: 'one-ayala' },
+    { id: 'one_ayala' },
     { id: 'circuit' },
-    { id: 'powerplant-mall' },
+    { id: 'powerplant_mall' },
   ];
   assert.deepEqual(getDestinationChoices(destinations), destinations);
 });
 
 test('destination choices exclude only the origin and retain destinations without a route from it', () => {
   const destinations = [
-    { id: 'one-ayala' },
+    { id: 'one_ayala' },
     { id: 'circuit' },
-    { id: 'powerplant-mall' },
+    { id: 'powerplant_mall' },
   ];
-  assert.deepEqual(getDestinationChoices(destinations, 'one-ayala'), [
+  assert.deepEqual(getDestinationChoices(destinations, 'one_ayala'), [
     { id: 'circuit' },
-    { id: 'powerplant-mall' },
+    { id: 'powerplant_mall' },
   ]);
 });
 

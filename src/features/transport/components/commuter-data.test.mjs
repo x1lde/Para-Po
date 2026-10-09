@@ -53,8 +53,8 @@ test('native commuter data exposes every SQLite destination, including unsupport
     const commuterData = loadNativeApp(async () => db);
     const destinations = await commuterData.listDestinations();
     assert.equal(destinations.length, 14);
-    assert(destinations.some((destination) => destination.id === 'powerplant-mall'));
-    assert.equal((await commuterData.lookupTransportation('rcbc-plaza', 'powerplant-mall')).status, 'no-routes');
+    assert(destinations.some((destination) => destination.id === 'powerplant_mall'));
+    assert.equal((await commuterData.lookupTransportation('rcbc_plaza', 'powerplant_mall')).status, 'no-routes');
   } finally {
     await db.closeAsync();
   }
