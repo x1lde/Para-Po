@@ -10,6 +10,8 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { pilotDataset } from '@/database/data/pilot-dataset';
 import { ChoicePicker } from '@/features/maps/components/ChoicePicker';
+import { JourneyOptions } from '@/features/transport/components/JourneyOptions';
+import { planJourney } from '@/features/transport/planner/journey-planner';
 import { useLandmarkRecognition } from '../hooks/use-landmark-recognition';
 import type { PhotoIssue, RecognitionResult } from '../types';
 
@@ -34,6 +36,7 @@ export function LandmarkCamera() {
   const [message, setMessage] = useState('');
   const [result, setResult] = useState<RecognitionResult | null>(null);
   const [originId, setOriginId] = useState('');
+  const [destinationId, setDestinationId] = useState('');
 
   useFocusEffect(useCallback(() => {
     setFocused(true);
@@ -104,7 +107,7 @@ export function LandmarkCamera() {
       : 'Photo recognition is unavailable. Select a landmark manually.') : '';
 
   return <ThemedView style={styles.page}>
-    <SafeAreaView style={styles.page} edges={['top', 'left', 'right']}>
+    <SafeAreaView style={styles.page} edges={['left', 'right']}>
       <ScrollView contentContainerStyle={styles.content}>
         <Pressable accessibilityRole="button" accessibilityLabel="Back to ride planner" style={({ pressed }) => [styles.button, { borderColor: theme.line, opacity: pressed ? .65 : 1 }]} onPress={() => router.navigate('/')}><ThemedText type="link">Back to ride planner</ThemedText></Pressable>
         <View style={styles.cameraHeading}><Icon name="scan" size={28} /><ThemedText type="subtitle">A landmark is all it takes.</ThemedText></View>
@@ -143,14 +146,21 @@ export function LandmarkCamera() {
             <ThemedText type="link">{landmark.name}</ThemedText>
           </Pressable>)}
         </>}
-        <ChoicePicker label="Choose a starting landmark manually" value={originId} choices={pilotDataset.landmarks}
-          disabled={busy} onSelect={setOriginId} />
-        {origin && <>
-          <ThemedText>Starting from {origin.name}</ThemedText>
-          <Pressable accessibilityRole="button" style={({ pressed }) => [styles.button, { backgroundColor: theme.primary, borderColor: theme.primary, opacity: pressed ? .7 : 1 }]} onPress={() => router.navigate({ pathname: '/map', params: { originId: origin.id, originRequest: String(Date.now()) } })}>
-            <ThemedText type="link" style={{ color: theme.primaryText, fontWeight: '600' }}>Plan journey from here</ThemedText>
+        <View style={[styles.journey, { paddingVertical: 4, backgroundColor: theme.backgroundElement, borderColor: theme.line }]}>
+          <ChoicePicker label="Choose a starting landmark manually" value={originId} choices={pilotDataset.landmarks}
+            disabled={busy} onSelect={setOriginId} />
+        </View>
+        {origin && <View style={[styles.journey, { backgroundColor: theme.backgroundElement, borderColor: theme.line }]}>
+          <View style={styles.cameraHeading}><Icon name="pin" size={22} /><ThemedText type="smallBold">Starting from {origin.name}</ThemedText></View>
+          <ChoicePicker label="Destination" value={destinationId} choices={pilotDataset.destinations.filter((place) => place.id !== origin.id)}
+            disabled={busy} onSelect={setDestinationId} />
+          {destinationId ? <JourneyOptions plan={planJourney(origin.id, destinationId)} limit={3} />
+            : <ThemedText type="small" themeColor="textSecondary">Where are you headed? Choose a destination to see which jeepney, bus or walk gets you there.</ThemedText>}
+          <Pressable accessibilityRole="button" style={({ pressed }) => [styles.button, { backgroundColor: theme.primary, borderColor: theme.primary, opacity: pressed ? .7 : 1 }]}
+            onPress={() => router.navigate({ pathname: '/map', params: { originId: origin.id, ...(destinationId ? { destinationId } : {}), originRequest: String(Date.now()) } })}>
+            <ThemedText type="link" style={{ color: theme.primaryText, fontWeight: '600' }}>{destinationId ? 'Plan journey from here on the map' : 'Plan journey from here'}</ThemedText>
           </Pressable>
-        </>}
+        </View>}
       </ScrollView>
     </SafeAreaView>
   </ThemedView>;
@@ -162,6 +172,7 @@ const styles = StyleSheet.create({
   content: { padding: 20, paddingBottom: 32, gap: 16, width: '100%', maxWidth: 640, alignSelf: 'center' },
   preview: { height: 320, borderRadius: 16, overflow: 'hidden', backgroundColor: '#111' },
   camera: { flex: 1 },
-  button: { minHeight: 48, padding: 12, borderWidth: 1, borderColor: '#DDE5DF', borderRadius: 12 },
+  button: { minHeight: 48, padding: 12, borderWidth: 1, borderColor: 'transparent', borderRadius: 12, justifyContent: 'center' },
   disabled: { opacity: 0.5 },
+  journey: { padding: 16, gap: 14, borderWidth: 1, borderRadius: 20 },
 });

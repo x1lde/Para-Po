@@ -40,8 +40,9 @@ The Camera tab (`/camera`) captures a rear-camera photo and passes its URI to th
 A recognized result selects the starting landmark automatically. Uncertain results ask for a candidate
 selection; unclear photos ask for a retake; rejected photos and unavailable recognition offer the full bundled manual list. Camera
 permission is optional, and web uses manual selection without starting native recognition.
-“Plan journey from here” opens the Map tab with the chosen origin; destination selection and transport
-lookup use the existing journey flow. The preview unmounts on tab blur and while the app is backgrounded.
+Once the starting landmark is set, the screen asks for a destination and shows the top three ways to get
+there (walk, jeepney, bus or P2P, from `planJourney`; see `docs/data/transit-routes.md`). “Plan journey from here”
+opens the Map tab with both places, where the chosen option is drawn on the map. The preview unmounts on tab blur and while the app is backgrounded.
 
 Run `npm run check:camera` for screen-handler checks with mocked React/native APIs, including result
 selection, the map handoff, permission fallback, duplicate capture and stale captures after blur.

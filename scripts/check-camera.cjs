@@ -52,8 +52,10 @@ function fixture({ result, state = { status: 'ready' }, platform = 'android', pe
     '@/components/commute/ui': { Icon: 'Icon' },
     '@/components/themed-text': { ThemedText: 'Text' },
     '@/components/themed-view': { ThemedView: 'View' },
-    '@/database/data/pilot-dataset': { pilotDataset: { landmarks: [landmark, other] } },
+    '@/database/data/pilot-dataset': { pilotDataset: { landmarks: [landmark, other], destinations: [landmark, other] } },
     '@/features/maps/components/ChoicePicker': { ChoicePicker: 'ChoicePicker' },
+    '@/features/transport/components/JourneyOptions': { JourneyOptions: 'JourneyOptions' },
+    '@/features/transport/planner/journey-planner': { planJourney: (origin, destination) => ({ status: 'planned', origin, destination }) },
     '../hooks/use-landmark-recognition': { useLandmarkRecognition: () => ({ state, recognize: async (uri) => { log.uris.push(uri); if (recognizeError) throw recognizeError; return result; } }) },
   };
   const compiled = ts.transpileModule(fs.readFileSync('src/features/recognition/components/LandmarkCamera.tsx', 'utf8'), {
@@ -107,6 +109,20 @@ async function main() {
   assert.equal(recognized.log.navigation[0].params.originId, landmark.id);
   assert(recognized.log.navigation[0].params.originRequest);
   console.log('PASS photo URI is recognized and recognized origin is passed to the map');
+
+  const routed = fixture({ result: { status: 'recognized', landmark, candidates: [{ landmark }] } });
+  await routed.capture();
+  assert(routed.text().includes('Where are you headed?'));
+  const destinationPicker = routed.nodes().find((node) => node.type === 'ChoicePicker' && node.props.label === 'Destination');
+  assert.deepEqual(destinationPicker.props.choices.map((c) => c.id), [other.id], 'the starting landmark is not offered as a destination');
+  destinationPicker.props.onSelect(other.id); routed.render();
+  const options = routed.nodes().find((node) => node.type === 'JourneyOptions');
+  assert.deepEqual(options.props.plan, { status: 'planned', origin: landmark.id, destination: other.id });
+  assert.equal(options.props.limit, 3);
+  routed.button('Plan journey from here').props.onPress();
+  assert.equal(routed.log.navigation[0].params.originId, landmark.id);
+  assert.equal(routed.log.navigation[0].params.destinationId, other.id);
+  console.log('PASS a recognized landmark leads to a destination choice and route suggestions on the same screen');
 
   const uncertain = fixture({ result: { status: 'uncertain', candidates: [{ landmark: other }, { landmark }] } });
   await uncertain.capture();
