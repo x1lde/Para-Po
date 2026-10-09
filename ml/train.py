@@ -35,10 +35,13 @@ def parse_args():
     p.add_argument("--out", default=str(ML_DIR / "models"))
     p.add_argument("--min-per-class", type=int, default=5)
     p.add_argument("--val-fraction", type=float, default=0.2)
-    p.add_argument("--head-epochs", type=int, default=60)
-    p.add_argument("--finetune-epochs", type=int, default=20)
+    p.add_argument("--head-epochs", type=int, default=40)
+    p.add_argument("--finetune-epochs", type=int, default=60)
+    p.add_argument("--finetune-layers", type=int, default=100)
     p.add_argument("--threshold", type=float, default=0.7)
     p.add_argument("--seed", type=int, default=42)
+    p.add_argument("--label-smoothing", type=float, default=0.1)
+    p.add_argument("--alpha", type=float, default=1.4, help="MobileNetV2 width multiplier (1.0 or 1.4)")
     return p.parse_args()
 
 
@@ -102,9 +105,9 @@ def make_ds(x, y, training, batch=8):
     return ds.prefetch(tf.data.AUTOTUNE)
 
 
-def build_model(num_classes):
+def build_model(num_classes, alpha=1.0):
     base = tf.keras.applications.MobileNetV2(
-        input_shape=(IMG_SIZE, IMG_SIZE, 3), include_top=False, weights="imagenet", pooling="avg"
+        input_shape=(IMG_SIZE, IMG_SIZE, 3), alpha=alpha, include_top=False, weights="imagenet", pooling="avg"
     )
     base.trainable = False
     inputs = tf.keras.Input((IMG_SIZE, IMG_SIZE, 3), name="image")  # RGB 0-255
@@ -115,26 +118,34 @@ def build_model(num_classes):
     return tf.keras.Model(inputs, outputs), base
 
 
+def SparseSmoothedCE(smoothing, num_classes):
+    """Label-smoothed cross-entropy for integer labels (keeps confidences calibrated)."""
+    ce = tf.keras.losses.CategoricalCrossentropy(label_smoothing=smoothing)
+    return lambda y, p: ce(tf.one_hot(tf.cast(tf.reshape(y, [-1]), tf.int32), num_classes), p)
+
+
 def train(model, base, train_ds, val_ds, class_weight, args):
     stop = lambda: tf.keras.callbacks.EarlyStopping(  # noqa: E731
         monitor="val_loss", patience=8, restore_best_weights=True
     )
-    model.compile(optimizer=tf.keras.optimizers.Adam(1e-3), loss="sparse_categorical_crossentropy", metrics=["accuracy"])
+    loss = SparseSmoothedCE(args.label_smoothing, len(class_weight))
+    model.compile(optimizer=tf.keras.optimizers.Adam(1e-3), loss=loss, metrics=["accuracy"])
     model.fit(train_ds, validation_data=val_ds, epochs=args.head_epochs, callbacks=[stop()],
               class_weight=class_weight, verbose=2)
 
     # Fine-tune the last blocks; BatchNorm stays frozen because base runs with training=False.
     base.trainable = True
-    for layer in base.layers[:-30]:
+    for layer in base.layers[:-args.finetune_layers]:
         layer.trainable = False
-    model.compile(optimizer=tf.keras.optimizers.Adam(1e-5), loss="sparse_categorical_crossentropy", metrics=["accuracy"])
+    model.compile(optimizer=tf.keras.optimizers.Adam(2e-5), loss=loss, metrics=["accuracy"])
     model.fit(train_ds, validation_data=val_ds, epochs=args.finetune_epochs, callbacks=[stop()],
               class_weight=class_weight, verbose=2)
 
 
 def to_tflite(model, path):
     converter = tf.lite.TFLiteConverter.from_keras_model(model)
-    converter.optimizations = [tf.lite.Optimize.DEFAULT]  # dynamic-range int8 weights, float I/O
+    converter.optimizations = [tf.lite.Optimize.DEFAULT]
+    converter.target_spec.supported_types = [tf.float16]  # fp16 weights: half size, ~no accuracy drift; float I/O
     path.write_bytes(converter.convert())
 
 
@@ -162,7 +173,7 @@ def main():
         print(f"skipped (<{args.min_per_class} images):", dropped)
 
     xtr, ytr, xva, yva = split(by_class, labels, args.val_fraction, args.seed)
-    model, base = build_model(len(labels))
+    model, base = build_model(len(labels), args.alpha)
     counts = np.bincount(ytr, minlength=len(labels))
     class_weight = {i: len(ytr) / (len(labels) * c) for i, c in enumerate(counts)}  # balance rare landmarks
     train(model, base, make_ds(xtr, ytr, True), make_ds(xva, yva, False), class_weight, args)
@@ -182,6 +193,8 @@ def main():
         "val_accuracy_when_confident": float((pred[confident] == yva[confident]).mean())
         if confident.any()
         else None,
+        "val_top3_accuracy": float(np.mean([t in p.argsort()[-3:] for p, t in zip(probs, yva)])),
+        "val_recall_per_class": {l: float((pred[yva == i] == i).mean()) for i, l in enumerate(labels)},
         "keras_tflite_max_abs_diff": float(np.abs(model.predict(val_imgs, verbose=0) - probs).max()),
     }
     for i, (p, c, t) in enumerate(zip(pred, conf, yva)):
