@@ -4,6 +4,7 @@
   "version": "1.0.0",
   "dependencies": {
     "@expo/ui": "~57.0.22",
+    "@maplibre/maplibre-react-native": "^11.5.0",
     "expo": "~57.0.27",
     "expo-camera": "~57.0.6",
     "expo-constants": "~57.0.21",
@@ -44,7 +45,9 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "lint": "expo lint",
-    "check:offline-data": "node scripts/check-offline-data.cjs"
+    "check:offline-data": "node scripts/check-offline-data.cjs",
+    "check:maps": "node scripts/check-map-scene.cjs",
+    "check:location": "node scripts/check-location.cjs"
   },
   "private": true
 }
