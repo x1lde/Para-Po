@@ -2,14 +2,14 @@ import { SymbolView, type SymbolViewProps } from 'expo-symbols';
 import { useNetworkState } from 'expo-network';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Platform, useWindowDimensions, useColorScheme, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Platform, useWindowDimensions, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useTheme } from '@/hooks/use-theme';
+import { Page } from '@/components/commute/ui';
 
-import { Colors, MaxContentWidth, Radius, Space } from '@/constants/theme';
+import { Fonts, MaxContentWidth, Radius, Space } from '@/constants/theme';
 
 export function useAppColors() {
-  const scheme = useColorScheme();
-  return Colors[scheme === 'dark' ? 'dark' : 'light'];
+  return useTheme();
 }
 
 const iconNames = {
@@ -93,18 +93,7 @@ function StatusPill({ icon, label, color }: { icon: AppIconName; label: string; 
 }
 
 export function ScreenFrame({ children }: { children: React.ReactNode }) {
-  const colors = useAppColors();
-  return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]} edges={['top']}>
-      <AppHeader />
-      <ScrollView
-        style={{ backgroundColor: colors.background }}
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled">
-        <View style={styles.content}>{children}</View>
-      </ScrollView>
-    </SafeAreaView>
-  );
+  return <Page>{children}</Page>;
 }
 
 export function Kicker({ children }: { children: React.ReactNode }) {
@@ -424,16 +413,16 @@ export function VehiclePixelArt({ mode }: { mode: keyof typeof vehiclePixels }) 
 }
 
 export const typography = StyleSheet.create({
-  display: { fontSize: 40, lineHeight: 46, fontWeight: '800', letterSpacing: -0.8 },
-  pageTitle: { fontSize: 34, lineHeight: 40, fontWeight: '700', letterSpacing: -0.6 },
-  title: { fontSize: 28, lineHeight: 34, fontWeight: '700', letterSpacing: -0.3 },
-  sectionTitle: { fontSize: 20, lineHeight: 27, fontWeight: '700', letterSpacing: -0.2 },
-  heading: { fontSize: 17, lineHeight: 23, fontWeight: '800' },
-  body: { fontSize: 16, lineHeight: 24 },
-  small: { fontSize: 14, lineHeight: 20 },
-  label: { fontSize: 12, lineHeight: 17, fontWeight: '700' },
-  kicker: { fontSize: 13, lineHeight: 18, fontWeight: '700', letterSpacing: 0.5, textTransform: 'uppercase' },
-  score: { fontSize: 56, lineHeight: 64, fontWeight: '800', letterSpacing: -1 },
+  display: { fontSize: 40, lineHeight: 46, fontFamily: Fonts.display, letterSpacing: -0.8 },
+  pageTitle: { fontSize: 34, lineHeight: 40, fontFamily: Fonts.bold, letterSpacing: -0.6 },
+  title: { fontSize: 28, lineHeight: 34, fontFamily: Fonts.bold, letterSpacing: -0.3 },
+  sectionTitle: { fontSize: 20, lineHeight: 27, fontFamily: Fonts.bold, letterSpacing: -0.2 },
+  heading: { fontSize: 17, lineHeight: 23, fontFamily: Fonts.display },
+  body: { fontSize: 16, lineHeight: 24, fontFamily: Fonts.sans },
+  small: { fontSize: 14, lineHeight: 20, fontFamily: Fonts.sans },
+  label: { fontSize: 12, lineHeight: 17, fontFamily: Fonts.bold },
+  kicker: { fontSize: 13, lineHeight: 18, fontFamily: Fonts.bold, letterSpacing: 0.5, textTransform: 'uppercase' },
+  score: { fontSize: 56, lineHeight: 64, fontFamily: Fonts.display, letterSpacing: -1 },
 });
 
 const styles = StyleSheet.create({
@@ -456,29 +445,29 @@ const styles = StyleSheet.create({
   brandRow: { flexDirection: 'row', alignItems: 'center', gap: Space.three, flexShrink: 1 },
   brandMark: { width: 42, height: 42, borderRadius: Radius.medium, alignItems: 'center', justifyContent: 'center' },
   brandCopy: { gap: 1 },
-  brandName: { fontSize: 20, lineHeight: 24, fontWeight: '800', letterSpacing: -0.3 },
-  brandCaption: { fontSize: 12, lineHeight: 16 },
+  brandName: { fontSize: 20, lineHeight: 24, fontFamily: Fonts.display, letterSpacing: -0.3 },
+  brandCaption: { fontSize: 12, lineHeight: 16, fontFamily: Fonts.sans },
   statusStack: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'flex-end', gap: Space.two, flexShrink: 1 },
   compactStatusStack: { justifyContent: 'flex-start' },
   scrollContent: { paddingBottom: 128, flexGrow: 1 },
   content: { width: '100%', maxWidth: MaxContentWidth, alignSelf: 'center', padding: Space.four, gap: Space.four },
-  kicker: { fontSize: 13, lineHeight: 18, fontWeight: '700', letterSpacing: 0.5, textTransform: 'uppercase' },
+  kicker: { fontSize: 13, lineHeight: 18, fontFamily: Fonts.bold, letterSpacing: 0.5, textTransform: 'uppercase' },
   card: { borderWidth: 1, borderRadius: Radius.card, padding: Space.four, gap: Space.three },
   cardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: Space.two },
   cardContent: { gap: Space.three },
-  bodyText: { fontSize: 16, lineHeight: 24 },
+  bodyText: { fontSize: 16, lineHeight: 24, fontFamily: Fonts.sans },
   button: { minHeight: 52, borderRadius: Radius.medium, paddingVertical: Space.three, paddingHorizontal: Space.four, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', gap: Space.two },
   buttonBordered: { borderWidth: 1 },
   buttonLink: { minHeight: 48, paddingVertical: Space.two, paddingHorizontal: 0, backgroundColor: 'transparent' },
   fullWidth: { alignSelf: 'stretch' },
-  buttonLabel: { fontSize: 16, lineHeight: 22, fontWeight: '700', textAlign: 'center' },
-  linkLabel: { fontSize: 15, lineHeight: 20, fontWeight: '700' },
+  buttonLabel: { fontSize: 16, lineHeight: 22, fontFamily: Fonts.bold, textAlign: 'center' },
+  linkLabel: { fontSize: 15, lineHeight: 20, fontFamily: Fonts.bold },
   badge: { minHeight: 28, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Space.one, paddingHorizontal: Space.two, paddingVertical: 3, borderRadius: Radius.pill, borderWidth: 1 },
-  badgeText: { fontSize: 12, lineHeight: 16, fontWeight: '700' },
+  badgeText: { fontSize: 12, lineHeight: 16, fontFamily: Fonts.bold },
   toggleChip: { minHeight: 48, borderRadius: Radius.pill, borderWidth: 1, paddingHorizontal: Space.three, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Space.one },
-  toggleChipLabel: { fontSize: 14, lineHeight: 19, fontWeight: '700' },
+  toggleChipLabel: { fontSize: 14, lineHeight: 19, fontFamily: Fonts.bold },
   emptyState: { borderRadius: Radius.medium, padding: Space.four, alignItems: 'center', gap: Space.two },
-  emptyStateTitle: { fontSize: 16, lineHeight: 22, fontWeight: '700', textAlign: 'center' },
+  emptyStateTitle: { fontSize: 16, lineHeight: 22, fontFamily: Fonts.bold, textAlign: 'center' },
   emptyStateCopy: { textAlign: 'center', maxWidth: 380 },
   progressTrack: { height: 8, borderRadius: Radius.pill, overflow: 'hidden', width: '100%' },
   progressFill: { height: '100%', borderRadius: Radius.pill },
@@ -488,10 +477,10 @@ const styles = StyleSheet.create({
   routeField: { minHeight: 72, borderWidth: 1, borderRadius: Radius.medium, paddingHorizontal: Space.three, paddingVertical: Space.two, flexDirection: 'row', alignItems: 'center', gap: Space.three },
   fieldIcon: { width: 42, height: 42, borderRadius: Radius.medium, alignItems: 'center', justifyContent: 'center' },
   fieldCopy: { flex: 1, gap: 3 },
-  fieldLabel: { fontSize: 12, lineHeight: 16, fontWeight: '600' },
-  fieldValue: { fontSize: 16, lineHeight: 22, fontWeight: '700' },
+  fieldLabel: { fontSize: 12, lineHeight: 16, fontFamily: Fonts.semibold },
+  fieldValue: { fontSize: 16, lineHeight: 22, fontFamily: Fonts.bold },
   recoveryLink: { minHeight: 48, alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: Space.two },
-  recoveryText: { fontSize: 15, lineHeight: 21, fontWeight: '700' },
+  recoveryText: { fontSize: 15, lineHeight: 21, fontFamily: Fonts.bold },
   vehicleArt: { alignItems: 'center', justifyContent: 'center', gap: 1, width: 48 },
   pixelRow: { flexDirection: 'row', gap: 1 },
   pixel: { width: 3, height: 3 },

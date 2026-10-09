@@ -1,0 +1,1 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="400" viewBox="0 0 600 400"><defs><linearGradient id="warm" x1="0" y1="0" x2="600" y2="400" gradientUnits="userSpaceOnUse"><stop stop-color="#F9C846"/><stop offset="1" stop-color="#FFE7A0"/></linearGradient></defs><path fill="url(#warm)" d="M0 0h600v400H0z"/></svg>

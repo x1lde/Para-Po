@@ -1,7 +1,7 @@
 import { StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 
 import { AppIcon, Badge, BodyText, Card, CardHeader, CardTitle, Kicker, ProgressBar, RecoveryLink, ScreenFrame, Separator, typography, useAppColors } from '@/components/commuter-ui';
-import { Radius, Space } from '@/constants/theme';
+import { Fonts, Radius, Space } from '@/constants/theme';
 
 const badges = [
   { icon: 'destination', tone: 'gold', title: 'First landmark', copy: 'Confirm your first useful landmark.' },
@@ -118,16 +118,16 @@ const styles = StyleSheet.create({
   levelCopy: { flex: 1, minWidth: 0, gap: Space.one },
   statRow: { flexDirection: 'row', alignItems: 'center', gap: Space.three, minHeight: 48 },
   statIcon: { width: 36, height: 36, borderRadius: Radius.medium, alignItems: 'center', justifyContent: 'center' },
-  statLabel: { flex: 1, fontSize: 15, lineHeight: 20, fontWeight: '600' },
+  statLabel: { flex: 1, fontSize: 15, lineHeight: 20, fontFamily: Fonts.semibold },
   statValue: { textAlign: 'right' },
   badgesHeading: { paddingTop: Space.three, flexDirection: 'row', alignItems: 'center', gap: Space.two },
   badgesGrid: { gap: Space.three },
   badgesGridWide: { flexDirection: 'row', flexWrap: 'wrap' },
   badgeCellWide: { width: '48%' },
   titleCopy: { flex: 1, gap: Space.one },
-  optionalLabel: { fontSize: 12, lineHeight: 16, fontWeight: '700' },
+  optionalLabel: { fontSize: 12, lineHeight: 16, fontFamily: Fonts.bold },
   badgeRow: { flexDirection: 'row', alignItems: 'center', gap: Space.three },
   badgeIcon: { width: 44, height: 44, borderRadius: Radius.medium, alignItems: 'center', justifyContent: 'center' },
   badgeCopy: { flex: 1, minWidth: 0, gap: Space.one },
-  badgeTitle: { fontSize: 15, lineHeight: 20, fontWeight: '700' },
+  badgeTitle: { fontSize: 15, lineHeight: 20, fontFamily: Fonts.bold },
 });

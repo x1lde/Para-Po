@@ -1,107 +1,47 @@
-import { useState } from 'react';
-import { Keyboard, Pressable, StyleSheet, TextInput, View } from 'react-native';
-
-import { Screen } from '@/components/screen';
+import { router } from 'expo-router';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
-import { Collapsible } from '@/components/ui/collapsible';
-import { Fonts, Spacing } from '@/constants/theme';
-import { commuterGuide } from '@/features/transport/commuter-guide';
+import { Art, Button, Card, Icon, Intro, Page, ui } from '@/components/commute/ui';
+import { pilotDataset } from '@/database/data/pilot-dataset';
 import { useTheme } from '@/hooks/use-theme';
+import { useResponsiveLayout } from '@/hooks/use-responsive-layout';
 
-export default function GuideScreen() {
-  const theme = useTheme();
-  const [query, setQuery] = useState('');
-  const terms = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
-  const entries = commuterGuide.filter((entry) => {
-    const searchable = `${entry.title} ${entry.summary} ${entry.keywords} ${entry.tips.map((tip) => `${tip.title} ${tip.text}`).join(' ')}`.toLowerCase();
-    return terms.every((term) => searchable.includes(term));
-  });
-
-  return (
-    <Screen>
-      <View style={styles.intro}>
-        <ThemedText type="smallBold" themeColor="accent" style={styles.eyebrow}>A HANDY TRAVEL COMPANION</ThemedText>
-        <ThemedText type="title" accessibilityRole="header">Commuter guide</ThemedText>
-        <ThemedText themeColor="textSecondary">Choose your ride for a few helpful tips before you board.</ThemedText>
-      </View>
-
-      <View style={styles.searchSection}>
-        <ThemedText type="smallBold" nativeID="guide-search-label">Search the guide</ThemedText>
-        <View style={[styles.searchBox, { backgroundColor: theme.backgroundElement, borderColor: theme.accent }]}>
-          <TextInput
-            accessibilityLabel="Search the guide"
-            accessibilityLabelledBy="guide-search-label"
-            placeholder="Try jeepney, train, or fare"
-            placeholderTextColor={theme.textSecondary}
-            value={query}
-            onChangeText={setQuery}
-            autoCorrect={false}
-            autoCapitalize="none"
-            returnKeyType="search"
-            onSubmitEditing={() => Keyboard.dismiss()}
-            style={[styles.input, { color: theme.text }]}
-          />
-          {query.length > 0 ? (
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Clear search"
-              onPress={() => setQuery('')}
-              style={({ pressed }) => [styles.clear, pressed && styles.pressed]}>
-              <ThemedText type="smallBold" themeColor="accent">Clear</ThemedText>
-            </Pressable>
-          ) : null}
-        </View>
-        <ThemedText type="small" themeColor="textSecondary" accessibilityLiveRegion="polite" role="status">
-          {terms.length ? `${entries.length} ${entries.length === 1 ? 'guide' : 'guides'} found` : '4 transport guides · Tap a card to read'}
-        </ThemedText>
-      </View>
-
-      <View style={styles.entries}>
-        {entries.map((entry) => (
-          <Collapsible key={entry.id} title={entry.title} summary={entry.summary}>
-            {entry.tips.map((tip) => (
-              <View key={tip.title} style={styles.tip}>
-                <ThemedText style={styles.tipTitle}>{tip.title}</ThemedText>
-                <ThemedText themeColor="textSecondary">{tip.text}</ThemedText>
-              </View>
-            ))}
-          </Collapsible>
-        ))}
-        {entries.length === 0 ? (
-          <View style={[styles.empty, { backgroundColor: theme.backgroundElement, borderColor: theme.border }]}>
-            <ThemedText style={styles.emptyTitle}>No matching guides</ThemedText>
-            <ThemedText themeColor="textSecondary">Try a transport type like “bus” or a topic like “ticket”. This guide does not search routes or destinations.</ThemedText>
-            <Pressable
-              accessibilityRole="button"
-              onPress={() => { setQuery(''); Keyboard.dismiss(); }}
-              style={({ pressed }) => [styles.reset, { backgroundColor: theme.accent }, pressed && styles.pressed]}>
-              <ThemedText themeColor="onAccent" style={styles.tipTitle}>Show all guides</ThemedText>
-            </Pressable>
-          </View>
-        ) : null}
-      </View>
-
-      <View style={[styles.reminder, { backgroundColor: theme.backgroundSelected }]}>
-        <ThemedText style={styles.tipTitle}>When in doubt, ask before boarding.</ThemedText>
-        <ThemedText themeColor="textSecondary">These are general tips, not verified route or fare information. Confirm your destination, fare, and unloading point with the driver or station staff.</ThemedText>
-      </View>
-    </Screen>
-  );
+export default function LandmarkGuide() {
+  const t = useTheme();
+  const { tablet: wide, desktop } = useResponsiveLayout();
+  return <Page>
+    <Intro eyebrow="Every landmark is a starting point" title="Know your Makati." description="A little more confident. A little more local. One landmark at a time." />
+    <View style={[styles.overview, wide && { flexDirection: 'row' }]}>
+      <Card style={[styles.level, { backgroundColor: t.backgroundSelected, flex: 1 }]}>
+        <View style={ui.row}><View style={[styles.tag, { backgroundColor: t.backgroundElement }]}><ThemedText type="smallBold" style={{ color: t.primary }}>Makati pilot</ThemedText></View><ThemedText type="small" themeColor="textSecondary">Your local companion</ThemedText></View>
+        <View style={[ui.row, { justifyContent: 'space-between' }]}><View><ThemedText style={styles.total}>{pilotDataset.landmarks.length}</ThemedText><ThemedText type="small" themeColor="textSecondary">supported landmarks</ThemedText></View><Art name="star" size={106} /></View>
+        <ThemedText type="smallBold">Find your starting point</ThemedText><View style={[styles.bar, { backgroundColor: t.primary }]} />
+        <ThemedText type="small" themeColor="textSecondary">Scan a landmark or choose it manually. ParaPo! helps you take the next step.</ThemedText>
+      </Card>
+      <Card style={{ flex: 1, paddingVertical: 8 }}>{[
+        ['camera', 'On-device', 'Landmark recognition', 'No photo upload'],
+        ['map', String(pilotDataset.routes.length), 'bundled journey options', 'Local guidance'],
+        ['pin', String(pilotDataset.landmarks.length), 'places to start from', 'Makati City'],
+      ].map(([icon, value, label, note], i) => <View key={label} style={[styles.stat, { borderTopWidth: i ? 1 : 0, borderColor: t.line }]}>
+        <View style={[styles.statIcon, { backgroundColor: t.backgroundSelected }]}><Icon name={icon as 'camera' | 'map' | 'pin'} size={23} /></View>
+        <View style={{ flex: 1, gap: 4 }}><ThemedText style={{ fontSize: value === 'On-device' ? 22 : 28, lineHeight: 34, fontWeight: '700' }}>{value}</ThemedText><ThemedText type="small" themeColor="textSecondary">{label}</ThemedText><ThemedText type="small" themeColor="textSecondary">{note}</ThemedText></View>
+      </View>)}</Card>
+    </View>
+    <View><ThemedText type="subtitle">A few ways to get going</ThemedText><ThemedText type="small" themeColor="textSecondary">Choose what works for you.</ThemedText></View>
+    <View style={[styles.overview, desktop && { flexDirection: 'row' }]}>{[
+      { art: 'star' as const, title: 'Start with what you see', text: 'Point your camera at a supported landmark to find your starting point.', path: '/camera' as const, color: t.goldSoft },
+      { art: 'ejeep' as const, title: 'Signal? Optional.', text: 'Recognition and bundled guidance work offline. The interactive map needs a connection.', path: '/map' as const, color: t.backgroundSelected },
+      { art: 'pin' as const, title: 'A little more local', text: 'Choose a familiar Makati landmark and a destination to plan your journey.', path: '/' as const, color: t.greenSoft },
+    ].map((item) => <Pressable key={item.title} accessibilityRole="button" onPress={() => router.navigate(item.path)} style={({ pressed }) => [{ flex: 1, opacity: pressed ? .7 : 1 }]}>
+      <Card style={{ flex: 1 }}><View style={[styles.badge, { backgroundColor: item.color }]}><Art name={item.art} size={57} /></View><ThemedText type="smallBold">{item.title}</ThemedText><ThemedText type="small" themeColor="textSecondary">{item.text}</ThemedText></Card>
+    </Pressable>)}</View>
+    <View><ThemedText type="subtitle">Your familiar places</ThemedText><ThemedText type="small" themeColor="textSecondary">Tap a landmark to use it as your starting point. Journey coverage varies by place.</ThemedText></View>
+    <View style={styles.catalog}>{pilotDataset.landmarks.map((landmark) => <Pressable key={landmark.id} accessibilityRole="button"
+      style={({ pressed }) => [styles.landmark, { borderColor: t.line, backgroundColor: pressed ? t.backgroundSelected : t.backgroundElement, width: wide ? '48%' : '100%' }]}
+      onPress={() => router.navigate({ pathname: '/map', params: { originId: landmark.id, originRequest: String(Date.now()) } })}>
+      <Icon name="pin" /><ThemedText style={{ flex: 1 }}>{landmark.name}</ThemedText><Icon name="chevron" size={17} />
+    </Pressable>)}</View>
+    <Card><ThemedText type="subtitle">Ready for a little adventure?</ThemedText><ThemedText themeColor="textSecondary">Choose a starting point. We’ll help with the ride.</ThemedText><Button icon="arrow" onPress={() => router.navigate('/')}>Find a ride</Button></Card>
+  </Page>;
 }
-
-const styles = StyleSheet.create({
-  intro: { gap: 12 },
-  eyebrow: { letterSpacing: 1, fontSize: 12 },
-  searchSection: { gap: Spacing.two },
-  searchBox: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderRadius: 14 },
-  input: { flex: 1, minWidth: 0, minHeight: 56, padding: Spacing.three, fontSize: 16, lineHeight: 24, fontFamily: Fonts.sans },
-  clear: { minWidth: 56, minHeight: 48, padding: Spacing.two, alignItems: 'center', justifyContent: 'center', borderRadius: 12 },
-  entries: { gap: 12 },
-  tip: { gap: Spacing.one },
-  tipTitle: { fontWeight: '700' },
-  reminder: { padding: Spacing.four, borderRadius: 20, gap: Spacing.two },
-  empty: { padding: Spacing.four, gap: Spacing.three, borderRadius: 20, borderWidth: 1 },
-  emptyTitle: { fontSize: 20, lineHeight: 28, fontWeight: '700' },
-  reset: { minHeight: 52, padding: Spacing.three, alignItems: 'center', justifyContent: 'center', borderRadius: 12 },
-  pressed: { opacity: 0.7 },
-});
+const styles = StyleSheet.create({ overview: { gap: 24 }, level: { padding: 28 }, tag: { paddingHorizontal: 11, paddingVertical: 5, borderRadius: 8 }, total: { fontSize: 72, lineHeight: 80, fontWeight: '700', letterSpacing: -4 }, bar: { height: 8, borderRadius: 8 }, stat: { flexDirection: 'row', alignItems: 'center', gap: 18, paddingVertical: 21, flexWrap: 'wrap' }, statIcon: { width: 50, height: 50, borderRadius: 12, justifyContent: 'center', alignItems: 'center' }, badge: { width: 87, height: 87, borderRadius: 24, justifyContent: 'center', alignItems: 'center' }, catalog: { flexDirection: 'row', flexWrap: 'wrap', gap: 14 }, landmark: { minHeight: 64, borderWidth: 1, borderRadius: 12, padding: 16, flexDirection: 'row', alignItems: 'center', gap: 12 } });

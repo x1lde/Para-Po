@@ -9,19 +9,19 @@ import {
   LANDMARK_MODEL_ASSET,
   MODEL_INPUT_SIZE,
   MODEL_LABELS,
+  MODEL_SELF_CHECK,
   NOT_A_LANDMARK_LABEL,
 } from '../model';
 import type { RecognitionCandidate, RecognitionResult } from '../types';
-import { imageToModelInput } from './preprocess';
-import { findLabelMismatches, interpretScores, type LabelScore } from './scoring';
+import { assessPhoto, imageToModelInput } from './preprocess';
+import { findLabelMismatches, interpretScores, type LabelScore, type ScoreDecision } from './scoring';
+import { selfCheckInput, selfCheckMismatch } from './self-check';
 
 // GPU first (the model runs 4 test-time views per photo); CPU if the delegate is unavailable.
 const PREFERRED_DELEGATES: TensorflowModelDelegate[][] =
   Platform.OS === 'ios' ? [['core-ml'], []] : Platform.OS === 'android' ? [['android-gpu'], []] : [[]];
 
 let modelPromise: Promise<TfliteModel> | null = null;
-let useCpuOnly = false;
-let recognitionQueue: Promise<void> = Promise.resolve();
 
 function assertModelShape(model: TfliteModel) {
   const input = model.inputs[0];
@@ -46,16 +46,35 @@ function assertLabelsMatchDataset() {
   }
 }
 
+/**
+ * Run the fixed self-check input and compare with the output recorded at training time. A GPU / Core ML
+ * delegate can load fine yet compute wrongly; on CPU a mismatch means the bundled model and its metadata
+ * (labels, threshold) don't belong together. Also warms the model up before the first photo.
+ */
+async function assertSelfCheck(model: TfliteModel) {
+  const input = selfCheckInput(MODEL_INPUT_SIZE, MODEL_SELF_CHECK.input);
+  const [output] = await model.run([input.buffer as ArrayBuffer]);
+  const mismatch = selfCheckMismatch(new Float32Array(output), MODEL_SELF_CHECK);
+  if (mismatch) throw new Error(`Model self-check failed with delegates [${model.delegates}]: ${mismatch}.`);
+}
+
 async function loadModel(): Promise<TfliteModel> {
   assertLabelsMatchDataset();
   let lastError: unknown;
-  for (const delegates of useCpuOnly ? [[]] : PREFERRED_DELEGATES) {
+  for (const delegates of PREFERRED_DELEGATES) {
+    let model: TfliteModel | undefined;
     try {
-      const model = await loadTensorflowModel(LANDMARK_MODEL_ASSET, delegates);
+      model = await loadTensorflowModel(LANDMARK_MODEL_ASSET, delegates);
       assertModelShape(model);
+      await assertSelfCheck(model);
       return model;
     } catch (error) {
       lastError = error;
+      try {
+        model?.dispose(); // release the rejected delegate's resources before trying the next option
+      } catch {
+        // already released
+      }
     }
   }
   throw lastError;
@@ -79,15 +98,7 @@ async function toCandidates(scores: LabelScore[]): Promise<RecognitionCandidate[
 }
 
 /** Recognize the landmark in a photo (file URI, e.g. from expo-camera takePictureAsync). */
-export function recognizeLandmark(photoUri: string): Promise<RecognitionResult> {
-  // A closed scanner can leave an invocation running while another opens.
-  // A shared TFLite interpreter must never receive concurrent input writes.
-  const operation = recognitionQueue.then(() => recognizePhoto(photoUri));
-  recognitionQueue = operation.then(() => undefined, () => undefined);
-  return operation;
-}
-
-async function recognizePhoto(photoUri: string): Promise<RecognitionResult> {
+export async function recognizeLandmark(photoUri: string): Promise<RecognitionResult> {
   let model: TfliteModel;
   try {
     model = await loadLandmarkModel();
@@ -102,31 +113,19 @@ async function recognizePhoto(photoUri: string): Promise<RecognitionResult> {
     return { status: 'unavailable', reason: 'image-unreadable', error };
   }
 
-  let scores: Float32Array;
+  // Blank, covered-lens and blown-out frames carry nothing to recognize; never let the model guess on them.
+  const issue = assessPhoto(input);
+  if (issue) return { status: 'unclear-photo', issue };
+
+  let decision: ScoreDecision;
   try {
     const [output] = await model.run([input.buffer as ArrayBuffer]);
-    scores = new Float32Array(output);
-  } catch (error) {
-    if (!model.delegates?.length) return { status: 'unavailable', reason: 'inference-failed', error };
-    // Some Android GPUs load a delegate successfully but fail on invocation.
-    // Retry this same photo on CPU and retain CPU for the rest of the session.
-    useCpuOnly = true;
-    modelPromise = null;
-    try {
-      model = await loadLandmarkModel();
-      const [output] = await model.run([input.buffer as ArrayBuffer]);
-      scores = new Float32Array(output);
-    } catch (cpuError) {
-      return { status: 'unavailable', reason: 'inference-failed', error: cpuError };
-    }
-  }
-
-  let decision: ReturnType<typeof interpretScores>;
-  try {
-    decision = interpretScores(scores, MODEL_LABELS, CONFIDENCE_THRESHOLD, NOT_A_LANDMARK_LABEL);
+    // Throws on NaN, out-of-range or wrong-length output, which is reported like any inference failure.
+    decision = interpretScores(new Float32Array(output), MODEL_LABELS, CONFIDENCE_THRESHOLD, NOT_A_LANDMARK_LABEL);
   } catch (error) {
     return { status: 'unavailable', reason: 'inference-failed', error };
   }
+
   try {
     const candidates = await toCandidates(decision.candidates);
     if (decision.kind === 'recognized') {
@@ -140,6 +139,6 @@ async function recognizePhoto(photoUri: string): Promise<RecognitionResult> {
     }
     return { status: 'uncertain', candidates };
   } catch (error) {
-    return { status: 'unavailable', reason: 'catalog-unavailable', error };
+    return { status: 'unavailable', reason: 'landmark-lookup-failed', error };
   }
 }

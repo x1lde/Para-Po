@@ -1,3 +1,5 @@
+> Historical design record. The active UI now follows [ParaPo! visual identity](visual-identity.md).
+
 # Para-Po frontend redesign — Sakay-inspired port
 
 ## Status
