@@ -1,0 +1,59 @@
+# Makati transport research
+
+Research date: 2026-10-09. This is an online-source collection for the 15 user-supplied candidates, not a field-verified dataset. No runtime seed has been changed.
+
+## What was collected
+
+- `landmarks.csv` and `destinations.csv` retain all 15 names. Thirteen have provisional site coordinates; Southpoint and Manila Premiere Wines have address leads only. Model classification labels remain blank.
+- `routes.csv` contains eleven directional or destination-specific research records, including one inferred parish journey and one historical electric-jeep record. IDs are application worksheet identifiers, not official route numbers.
+- `boarding-points.csv` contains eleven named pickup leads. Exact boarding coordinates are blank because the retrieved sources did not substantiate them. Building coordinates must not be reused as loading-bay coordinates.
+- Relationship worksheets record candidate route/pickup and landmark/access links. Stop order 0 represents the sole collected origin boarding point, not an operator-published stop sequence.
+- `destination-access.csv` gives one access lead for each destination, including explicit gaps. Several rows combine a published journey to One Ayala with a separately sourced pedestrian connection. Those combined journeys are labeled inferred and are not direct routes to each mall or museum.
+
+This is selected journey coverage, not a complete table of every origin/destination pair. San Lorenzo Place and Guadalupe appear as research origins only and have not been added to the supported landmark catalog.
+
+## Evidence status
+
+| Status | Meaning |
+| --- | --- |
+| `source-reviewed` | Online evidence supports a location or journey lead. It does not establish current service, exact stopping legality, or field verification. |
+| `inferred` | A relationship was assembled from separately sourced facts rather than a directly confirmed journey. Review before use. |
+| `historical` | Older service information retained as a lead. Current operation and direction need confirmation. |
+| `unresolved` | The research did not establish a defensible route or exact location. Blank fields remain unknown. |
+| `verified` | Reserved for team-confirmed complete records. No collected row has this status. |
+
+`researched_on` is the retrieval date; `verified_on` is intentionally blank. `evidence_kind` distinguishes news, community reports, search excerpts, and mapped places. Search indexing and crawl dates are not service verification dates. Where known, `source_published_on` records the article/report date.
+
+## Important source findings
+
+The strongest recent directional lead is the [April 2026 Circuit–One Ayala P2P report](https://www.topgear.com.ph/news/motoring-news/p2p-2026-circuit-makati-one-ayala-a2619-20260428). It distinguishes CityFlats as the Circuit pickup and Gallery Drive as the outbound arrival. It also reports limited operating days and a beep payment requirement; these are usability constraints to confirm, not boarding-time comparison features.
+
+The [2026 One Ayala terminal guide](https://www.spot.ph/newsfeatures/mobility/routes-at-one-ayala-2026-a5229-20260422-bsc) identifies Gate 3 for Libertad and Gate 4 for Makati Loop. Its Washington and electric-jeep sections repeat similar stop lists, so those lists were not adopted as verified stop geometry. The Washington boarding lead instead uses [2026 commuter advice](https://www.reddit.com/r/commutersph/comments/1seluiy/one_ayala_to_makati_cbd/), which puts the queue in the basement. Older Shell advice must not be silently combined with that location.
+
+[Globe's terminal access guide](https://www.globe.com.ph/blog/one-ayala-terminal-guide) describes connections to SM Makati and Glorietta and walking access to Greenbelt and Ayala Museum. It supports collecting last-mile access leads, but does not prove exact pedestrian paths or operating access conditions. The [Ayala Center description](https://en.wikipedia.org/wiki/Ayala_Center) identifies a broad complex rather than a single arrival entrance.
+
+The [2023 Makati Loop electric-jeep report](https://www.topgear.com.ph/news/motoring-news/makati-loop-e-jeepney-love-bus-a2619-20230619) is retained as historical evidence, including its Greenbelt stop lead. An electric jeepney stays under `jeepney`; it is not relabeled as an electric bus. Its listed stops do not establish the current direction-specific sequence.
+
+For Manila Premiere Wines, a [business listing](https://www.businesslist.ph/company/304326/manila-premiere-wines) provides an Aguirre Street address. The [business's own contact page](https://manila-premiere-wines.com/contact-us/) did not provide a usable coordinate or commuting route in the retrieved content. No route was invented for it.
+
+## Coordinate provenance and rejected matches
+
+Coordinates in the worksheets are provisional place references, generally building or complex points. They are not verified entrances, queues, or safe roadside stops. Both origin and destination worksheets carry the same site reference for now; the photographed landmark and intended arrival entrance may need different coordinates.
+
+RCBC and Glorietta points were converted from the cited Wikidata degrees/minutes/seconds to decimal degrees and rounded to six decimals. The additional digits are a conversion, not a claim of measurement accuracy. Circuit and Landmark rely on secondary place directories and need stronger confirmation.
+
+A [Mapcarta Landmark result](https://mapcarta.com/N9610352066) was rejected because it identifies a Taguig department store despite a misleading Makati location heading. An [Avida rental listing](https://alexi.pro/properties/310-Condominium-Makati-South-Point-CITY-OF-MAKATI-NATIONAL-CAPITAL-REGION-NCR-PHP14-129/) supplies coordinates but also inconsistent building metadata; those coordinates were not adopted. The [Waze Southpoint listing](https://www.waze.com/live-map/directions/ph/ncr/makati-city/avida-towers-makati-southpoint?to=place.ChIJFX875WXJlzMRsrFBKhZfrw0) provides an address lead instead.
+
+Several social posts and route-planner pages were not fully retrievable. Indexed community excerpts are identified as such. They support research leads but cannot substitute for complete operator evidence or field confirmation. Some older guides mention rail services or pickup locations that may have changed; these were not imported wholesale.
+
+## Attribution
+
+Rows derived from Mapcarta cite their individual pages, which identify underlying OpenStreetMap objects. Retain attribution to [OpenStreetMap contributors](https://www.openstreetmap.org/copyright) and the linked Open Database License information when reusing that data. Wikidata structured data is available under CC0 as indicated on its source pages. This collection stores concise factual fields and source references rather than copied articles or scraped map imagery.
+
+## Before using these rows in SQLite
+
+Confirm actual signboards, travel direction, legal boarding/alighting points, exact coordinates, remaining pedestrian access, and source dates. For recent P2P reports, confirm the current operator and service conditions. Preserve findings and evidence in the worksheets, set `verified_on` only after team verification, then promote reviewed records into the bundled seed.
+
+Do not import `destination-access.csv` as routes: hub-plus-walk rows target places different from the bus route's actual terminal. The current runtime contract also does not expose detailed boarding/alighting instruction text; that remains an explicit integration task after verification.
+
+No tests, lint, typechecks, builds, commits, or pushes were run for this research task.

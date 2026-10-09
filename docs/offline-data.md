@@ -28,7 +28,7 @@ SQLite enforces foreign keys, unique model labels, coordinate ranges, allowed tr
 
 ## Adding the pilot dataset
 
-The team currently has the following 15 candidate landmark names only. Coordinates, model labels, supported destinations, directional routes, and boarding relationships have not been supplied. This list is planning input, not verified transportation seed data. Choose a smaller demonstration subset before collecting the remaining data.
+The team supplied the following 15 candidate landmark names. The [pilot data worksheets](./data/README.md) now include sourced online location and transportation leads; see [research notes](./data/research.md) for uncertainty and gaps. Model labels and field-verified journey data have not been supplied, and the runtime seed remains empty. Keep all 15 candidates and add verified journey coverage incrementally.
 
 - Ayala Center
 - Avida Towers Makati Southpoint
