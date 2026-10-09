@@ -18,8 +18,8 @@ import { TransportMap } from './TransportMap';
 export function JourneyMap() {
   const [origins, setOrigins] = useState<Landmark[]>([]);
   const [destinations, setDestinations] = useState<Destination[]>([]);
-  const [originId, setOriginId] = useState('ayala-malls-circuit');
-  const [destinationId, setDestinationId] = useState('one-ayala');
+  const [originId, setOriginId] = useState('ayala_malls_circuit');
+  const [destinationId, setDestinationId] = useState('one_ayala');
   const [result, setResult] = useState<TransportLookupResult | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -35,7 +35,7 @@ export function JourneyMap() {
   const selectionSequence = useRef(0);
   const locationSequence = useRef(0);
   const locationRequest = useRef<AbortController | null>(null);
-  const loadJourney = useCallback(async (origin: string, requestedDestination = 'one-ayala') => {
+  const loadJourney = useCallback(async (origin: string, requestedDestination = 'one_ayala') => {
     const sequence = ++selectionSequence.current;
     setLoading(true); setError(false); setResult(null); setSelectedMarker(null); setOriginId(origin); setFocusMode('journey');
     setSelectedBoardingId(null); setSelectedRouteId(undefined);
@@ -51,7 +51,7 @@ export function JourneyMap() {
   }, []);
   useEffect(() => {
     let active = true;
-    void Promise.resolve().then(() => { if (active) void loadJourney('ayala-malls-circuit'); });
+    void Promise.resolve().then(() => { if (active) void loadJourney('ayala_malls_circuit'); });
     return () => { active = false; selectionSequence.current += 1; locationSequence.current += 1; locationRequest.current?.abort(); };
   }, [loadJourney]);
   useEffect(() => {
