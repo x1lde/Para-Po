@@ -75,8 +75,8 @@ const onwardRoutes = onwardJourneys.map<TransportationRoute>((journey) => ({
 
 /** Web-sourced pilot suggestions; verification flags and unknown coordinates remain explicit. */
 export const pilotDataset: TransportDataset = {
-  version: 6,
-  sourceNotes: 'Underscore-separated landmark and destination IDs; 14 user-supplied Makati places after removing Manila Premiere Wines due to insufficient training images; 6 web-sourced recommendation records using 2 published directional bus legs and 4 onward walking variants. Sources: April 28 2026 P2P report and February 24 2026 mall connection guide, reviewed 2026-10-09. Combined bus-plus-walk journeys are explicitly assembled from separate sources. Landmark classification labels map recognition model outputs. Unknown coordinates remain null and access/boarding flags remain false. See docs/data/web-recommendations.md. Dataset 6 adds general One Ayala Upper Ground orientation from the March 2026 Globe guide and clarifies the inbound final stop, reviewed 2026-10-10. Exact bay and access remain unconfirmed. No field verification or guaranteed current operation is claimed.',
+  version: 7,
+  sourceNotes: 'Underscore-separated landmark and destination IDs; 14 user-supplied Makati places after removing Manila Premiere Wines due to insufficient training images; 6 route records supporting 8 web-sourced origin-destination pairs using 2 published directional bus legs, 4 onward walking variants, and 2 origin-access variants. Sources: April 28 2026 P2P report and February 24 2026 mall connection guide, reviewed 2026-10-09. Combined bus-plus-walk journeys are explicitly assembled from separate sources. Landmark classification labels map recognition model outputs. Unknown coordinates remain null and access/boarding flags remain false. See docs/data/web-recommendations.md. Dataset 7 adds sourced SM Makati and Glorietta access to the One Ayala-to-Circuit bus leg; dataset 6 added general One Ayala Upper Ground orientation from the March 2026 Globe guide and clarifies the inbound final stop, reviewed 2026-10-10. Exact bay and access remain unconfirmed. No field verification or guaranteed current operation is claimed.',
   landmarks: places.map(([id, name]) => ({
     id, name, latitude: null, longitude: null, classificationLabel: modelClassificationLabels[id],
   })),
@@ -130,6 +130,16 @@ export const pilotDataset: TransportDataset = {
     {
       landmarkId: 'one_ayala', boardingPointId: 'one-ayala-p2p-loading',
       walkingInstructions: null, accessVerified: false,
+    },
+    {
+      landmarkId: 'sm_makati', boardingPointId: 'one-ayala-p2p-loading',
+      walkingInstructions: 'The published terminal guide identifies access from SM Store levels 3 and 4 via footbridges to One Ayala. Follow terminal signs for the Upper Ground bus/P2P area and ask staff for the Circuit-bound service. The complete bridge-to-bay path and current access hours are unconfirmed.',
+      accessVerified: false,
+    },
+    {
+      landmarkId: 'glorietta', boardingPointId: 'one-ayala-p2p-loading',
+      walkingInstructions: 'The published terminal guide identifies entry to One Ayala from the Glorietta 5 Mall Lobby. Find that connection, then follow terminal signs for the Upper Ground bus/P2P area and confirm the Circuit-bound loading bay with staff. The complete entrance-to-bay path and current access hours are unconfirmed.',
+      accessVerified: false,
     },
   ],
 };

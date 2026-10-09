@@ -24,13 +24,32 @@ export interface TransportDataset {
 
 export const bundledDataset: TransportDataset = pilotDataset;
 
+/** Match reference identities before trusting an installed version marker. */
+async function hasReferenceRows(db: SQLiteDatabase, dataset: TransportDataset): Promise<boolean> {
+  const tables = [
+    { sql: 'SELECT id, classification_label AS label FROM landmarks', fields: ['id', 'label'], expected: dataset.landmarks.map((row) => [row.id, row.classificationLabel]) },
+    { sql: 'SELECT id FROM destinations', fields: ['id'], expected: dataset.destinations.map((row) => [row.id]) },
+    { sql: 'SELECT id FROM boarding_points', fields: ['id'], expected: dataset.boardingPoints.map((row) => [row.id]) },
+    { sql: 'SELECT id, destination_id AS destinationId FROM transportation_routes', fields: ['id', 'destinationId'], expected: dataset.routes.map((row) => [row.id, row.destinationId]) },
+    { sql: 'SELECT route_id AS routeId, boarding_point_id AS pointId, stop_order AS stopOrder FROM route_boarding_points', fields: ['routeId', 'pointId', 'stopOrder'], expected: dataset.routeBoardingPoints.map((row) => [row.routeId, row.boardingPointId, row.stopOrder]) },
+    { sql: 'SELECT landmark_id AS landmarkId, boarding_point_id AS pointId FROM landmark_boarding_points', fields: ['landmarkId', 'pointId'], expected: dataset.landmarkBoardingPoints.map((row) => [row.landmarkId, row.boardingPointId]) },
+  ];
+  for (const table of tables) {
+    const rows = await db.getAllAsync<Record<string, string | number | null>>(table.sql);
+    if (rows.length !== table.expected.length) return false;
+    const actual = new Set(rows.map((row) => JSON.stringify(table.fields.map((field) => row[field]))));
+    if (!table.expected.every((row) => actual.has(JSON.stringify(row)))) return false;
+  }
+  return true;
+}
+
 /** Caller must use a transaction and enforce/check foreign keys before commit. */
 export async function seedDatabase(db: SQLiteDatabase, dataset: TransportDataset) {
   validateDataset(dataset);
   const stored = await db.getFirstAsync<{ version: number }>(
     'SELECT version FROM dataset_metadata WHERE id = 1'
   );
-  if (stored?.version === dataset.version) return;
+  if (stored?.version === dataset.version && await hasReferenceRows(db, dataset)) return;
   if (stored && stored.version > dataset.version) {
     throw new Error('The local dataset is newer than this application supports.');
   }

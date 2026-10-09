@@ -7,7 +7,7 @@ export function journeyScene(plan: JourneyPlan | null, option: JourneyOption | u
   if (!plan || plan.status !== 'planned') return scene;
   const place = (kind: 'origin' | 'destination', p: PlannerPlace): MapMarker => ({
     id: `${kind}:${p.id}`, name: p.name, kind, coordinate: [p.lon, p.lat],
-    details: [`Map position: OpenStreetMap ${p.osm}`], sourceReference: `https://www.openstreetmap.org/${p.osm}`,
+    approximate: true, details: [`Landmark/site reference: OpenStreetMap ${p.osm}; exact entrance unconfirmed.`], sourceReference: `https://www.openstreetmap.org/${p.osm}`,
   });
   scene.markers.push(place('origin', plan.origin), place('destination', plan.destination));
   option?.legs.forEach((leg, index) => {
@@ -15,8 +15,8 @@ export function journeyScene(plan: JourneyPlan | null, option: JourneyOption | u
     const route = routeOf(leg.route);
     const label = `${route.name}${route.ref ? ` (${route.ref})` : ''}`;
     scene.markers.push(
-      { id: `boarding:${index}:board`, name: `Board: ${leg.board.name}`, kind: 'boarding', coordinate: [leg.board.lon, leg.board.lat], routeNames: [label], sourceReference: route.source },
-      { id: `boarding:${index}:alight`, name: `Get off: ${leg.alight.name}`, kind: 'boarding', coordinate: [leg.alight.lon, leg.alight.lat], routeNames: [label], sourceReference: route.source },
+      { id: `boarding:${index}:board`, name: `Candidate boarding: ${leg.board.name}`, kind: 'boarding', coordinate: [leg.board.lon, leg.board.lat], approximate: true, details: ['Mapped or inferred candidate point. Exact legal loading location and current service are unconfirmed.'], routeNames: [label], sourceReference: route.source },
+      { id: `boarding:${index}:alight`, name: `Candidate alighting: ${leg.alight.name}`, kind: 'boarding', coordinate: [leg.alight.lon, leg.alight.lat], approximate: true, details: ['Mapped or inferred candidate point. Exact legal unloading location and final access are unconfirmed.'], routeNames: [label], sourceReference: route.source },
     );
     if (leg.path.length >= 2) scene.routes.push({ routeId: `${leg.route}:${index}`, coordinates: leg.path, sourceReference: route.source });
   });

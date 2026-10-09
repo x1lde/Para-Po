@@ -49,6 +49,9 @@ export function validateDataset(dataset: TransportDataset): void {
     coordinates(landmark, landmark.id);
     optionalText(landmark.classificationLabel, 'classification label');
     if (landmark.classificationLabel !== null) {
+      if (landmark.classificationLabel !== landmark.classificationLabel.trim()) {
+        throw new Error('Dataset classification labels must not contain leading or trailing whitespace.');
+      }
       if (labels.has(landmark.classificationLabel)) throw new Error('Dataset classification labels must be unique.');
       labels.add(landmark.classificationLabel);
     }

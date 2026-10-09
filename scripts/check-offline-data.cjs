@@ -115,10 +115,10 @@ async function main() {
     });
     await check('coverage identifies real supported journeys and missing data', async () => {
       const coverage = getDatasetCoverage(bundledDataset);
-      assert.equal(coverage.counts.coveredPairs, 6);
-      assert.equal(coverage.counts.sourceBasedPairs, 6);
+      assert.equal(coverage.counts.coveredPairs, 8);
+      assert.equal(coverage.counts.sourceBasedPairs, 8);
       assert.equal(coverage.counts.readyPairs, 0);
-      assert.equal(coverage.originsWithoutRecommendations.length, 12);
+      assert.equal(coverage.originsWithoutRecommendations.length, 10);
       assert.equal(coverage.boardingPointsWithoutCoordinates.length, 2);
       assert.deepEqual(coverage.landmarksWithoutModelLabels, []);
       for (const journey of coverage.journeys) {
@@ -157,6 +157,9 @@ async function main() {
       assert.throws(() => validateDataset(invalid), /coordinates/);
       await assert.rejects(db.withTransactionAsync(() => seedDatabase(db, invalid)), /coordinates/);
       const duplicate = structuredClone(bundledDataset);
+      const paddedLabel = structuredClone(bundledDataset);
+      paddedLabel.landmarks[0].classificationLabel = ` ${paddedLabel.landmarks[0].classificationLabel} `;
+      assert.throws(() => validateDataset(paddedLabel), /whitespace/);
       duplicate.landmarks.push(duplicate.landmarks[0]);
       assert.throws(() => validateDataset(duplicate), /duplicate/);
       const orphan = structuredClone(bundledDataset);
@@ -167,6 +170,20 @@ async function main() {
       assert.throws(() => validateDataset(order), /duplicate/);
       assert.equal((await repo.getDatasetMetadata()).version, bundledDataset.version);
       assert.equal((await repo.listLandmarks()).length, 14);
+    });
+    await check('same-version missing reference rows are repaired atomically', async () => {
+      db.raw.exec('DELETE FROM landmark_boarding_points; DELETE FROM route_boarding_points; DELETE FROM transportation_routes; DELETE FROM boarding_points; DELETE FROM destinations; DELETE FROM landmarks;');
+      assert.equal((await repo.getDatasetMetadata()).version, bundledDataset.version);
+      await db.withTransactionAsync(() => seedDatabase(db, bundledDataset));
+      assert.equal((await repo.listLandmarks()).length, 14);
+      assert.equal((await lookupTransportation('ayala_malls_circuit', 'one_ayala')).status, 'source-based');
+      assert.deepEqual(db.raw.prepare('PRAGMA foreign_key_check').all(), []);
+      db.raw.exec("UPDATE landmarks SET name = 'TEST ONLY retained sentinel' WHERE id = 'one_ayala'");
+    });
+    await check('readiness rejects stale empty issues when verification fields are incomplete', async () => {
+      const { isGuidanceReady } = load('src/features/transport/services/guidance-service.ts');
+      const [option] = await repo.findBoardingOptions('ayala_malls_circuit', 'one_ayala');
+      assert.equal(isGuidanceReady({ ...option, guidanceIssues: [] }), false);
     });
     await check('mid-seed SQL failure rolls back deleted rows and metadata', async () => {
       const changed = structuredClone(bundledDataset);
@@ -238,6 +255,19 @@ async function main() {
         }
         legacy.raw.exec(`PRAGMA user_version = ${version}; PRAGMA foreign_keys = ON;`);
         const legacyLoad = appRuntime(async () => legacy);
+        // Isolate schema-copy preservation with a matching synthetic dataset.
+        const legacySeed = legacyLoad('src/database/seed.ts');
+        legacySeed.bundledDataset = {
+          version: bundledDataset.version, sourceNotes: 'TEST ONLY legacy migration fixture',
+          landmarks: [{ id: 'test-origin', name: 'TEST ONLY origin', latitude: 14, longitude: 121, classificationLabel: 'test-label' }],
+          destinations: [{ id: 'test-destination', name: 'TEST ONLY destination', latitude: 14, longitude: 121 }],
+          boardingPoints: [{ id: 'test-point', name: 'TEST ONLY boarding', latitude: 14, longitude: 121 }],
+          routes: [{ id: 'test-route', name: 'TEST ONLY route', transportationType: 'jeepney', destinationId: 'test-destination',
+            alightingLocation: null, alightingInstructions: null, destinationWalkingInstructions: null,
+            evidenceStatus: 'pending', sourceReference: null, reviewedOn: null, limitations: null }],
+          routeBoardingPoints: [{ routeId: 'test-route', boardingPointId: 'test-point', stopOrder: 0, boardingInstructions: null, boardingVerified: false }],
+          landmarkBoardingPoints: [{ landmarkId: 'test-origin', boardingPointId: 'test-point', walkingInstructions: null, accessVerified: false }],
+        };
         await legacyLoad('src/database/client.ts').getDatabase();
         assert.equal(legacy.raw.prepare('PRAGMA user_version').get().user_version, 3);
         assert.equal(legacy.raw.prepare('PRAGMA foreign_keys').get().foreign_keys, 1);
@@ -311,6 +341,45 @@ async function main() {
       assert.deepEqual(installed.raw.prepare('PRAGMA foreign_key_check').all(), []);
       await installed.withTransactionAsync(() => seedDatabase(installed, bundledDataset));
       assert.equal((await upgradedRepo.getDatasetMetadata()).version, bundledDataset.version);
+    });
+    await check('dataset 5 upgrades to 6, then current data without broken identities or relationships', async () => {
+      const installed = makeDb();
+      installed.raw.exec(schema.INITIAL_SCHEMA + schema.COMMUTER_INSTRUCTIONS_MIGRATION + schema.MANUAL_CATALOG_MIGRATION);
+      installed.raw.exec('PRAGMA foreign_keys = ON; PRAGMA user_version = 3;');
+      const version6 = structuredClone(bundledDataset);
+      version6.version = 6;
+      version6.landmarkBoardingPoints = version6.landmarkBoardingPoints.filter((link) => !['sm_makati', 'glorietta'].includes(link.landmarkId));
+      const version5 = structuredClone(version6);
+      version5.version = 5;
+      version5.routes[0].alightingInstructions = 'Get off at One Ayala.';
+      await installed.withTransactionAsync(() => seedDatabase(installed, version5));
+      const stage6 = appRuntime(async () => installed);
+      stage6('src/database/seed.ts').bundledDataset = version6;
+      const repo6 = stage6('src/database/repositories/transport-repository.ts');
+      assert.equal((await repo6.getDatasetMetadata()).version, 6);
+      assert.equal((await repo6.listLandmarks()).length, 14);
+      assert.deepEqual(installed.raw.prepare('PRAGMA foreign_key_check').all(), []);
+      const latest = appRuntime(async () => installed);
+      const currentRepo = latest('src/database/repositories/transport-repository.ts');
+      assert.equal((await currentRepo.getDatasetMetadata()).version, bundledDataset.version);
+      const currentLookup = latest('src/features/transport/services/transport-service.ts').lookupTransportation;
+      for (const origin of ['one_ayala', 'sm_makati', 'glorietta']) {
+        assert.equal((await currentLookup(origin, 'ayala_malls_circuit')).status, 'source-based');
+      }
+      for (const place of await currentRepo.listLandmarks()) {
+        assert(!place.id.includes('-'));
+        assert(place.classificationLabel);
+      }
+      assert.deepEqual(installed.raw.prepare('PRAGMA foreign_key_check').all(), []);
+    });
+    await check('database cleanup failure does not hide the initialization error', async () => {
+      const broken = makeDb();
+      broken.raw.exec('PRAGMA user_version = 99');
+      const close = broken.closeAsync;
+      broken.closeAsync = async () => { throw new Error('TEST ONLY close failure'); };
+      const brokenRuntime = appRuntime(async () => broken);
+      await assert.rejects(brokenRuntime('src/database/client.ts').getDatabase(), /schema is newer/);
+      broken.closeAsync = close;
     });
     await check('failed initialization closes connection and retries; newer schema rejected', async () => {
       const future = makeDb();

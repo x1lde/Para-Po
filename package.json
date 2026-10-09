@@ -55,6 +55,7 @@
     "check:location": "node scripts/check-location.cjs",
     "check:recognition": "node scripts/check-recognition.cjs",
     "check:camera": "node scripts/check-camera.cjs",
+    "check:ride-backend": "node scripts/check-ride-backend.cjs",
     "check:journeys": "node scripts/check-journeys.cjs"
   },
   "private": true

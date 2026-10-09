@@ -3,3 +3,4 @@ export const commuterDataUnavailableMessage = '';
 
 export { listLandmarks, listDestinations, listDestinationsForOrigin } from '@/database/repositories/transport-repository';
 export { lookupTransportation } from '@/features/transport/services/transport-service';
+export { getJourneyRecommendations } from '@/features/transport/services/recommendation-service';

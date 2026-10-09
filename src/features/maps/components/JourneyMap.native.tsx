@@ -5,6 +5,9 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Button, Card, Icon, ui } from '@/components/commute/ui';
 import { pilotDataset } from '@/database/data/pilot-dataset';
+import { getJourneyRecommendations, rankJourneyRecommendations } from '@/features/transport/services/recommendation-service';
+import type { TransportLookupResult } from '@/features/transport/types';
+import { usableFix } from '@/features/location/services/proximity';
 import { getForegroundLocation } from '@/features/location/services/location-service';
 import type { LocationFix } from '@/features/location/types';
 import { JourneyOptions } from '@/features/transport/components/JourneyOptions';
@@ -34,6 +37,32 @@ export function JourneyMap() {
   const [focusRequest, setFocusRequest] = useState(0);
   const [focusMode, setFocusMode] = useState<'journey' | 'user'>('journey');
   const locationRequest = useRef<AbortController | null>(null);
+  const [lookup, setLookup] = useState<TransportLookupResult | null>(null);
+  const [loadingGuidance, setLoadingGuidance] = useState(false);
+  const [storageError, setStorageError] = useState(false);
+  const [lookupAttempt, setLookupAttempt] = useState(0);
+  useEffect(() => {
+    let active = true;
+    void Promise.resolve().then(async () => {
+      if (!active) return;
+      setLookup(null); setStorageError(false);
+      if (!originId || !destinationId) { setLoadingGuidance(false); return; }
+      setLoadingGuidance(true);
+      try {
+        const response = await getJourneyRecommendations({ originId, destinationId });
+        if (active) setLookup(response.result);
+      } catch { if (active) setStorageError(true); }
+      finally { if (active) setLoadingGuidance(false); }
+    });
+    return () => { active = false; };
+  }, [originId, destinationId, lookupAttempt]);
+  useEffect(() => {
+    if (!fix) return;
+    const timer = setTimeout(() => { setFix(null); setLocationMessage('GPS position expired. Refresh it or select a starting point manually.'); },
+      Math.max(0, fix.timestamp + 120000 - Date.now()));
+    return () => clearTimeout(timer);
+  }, [fix]);
+  const recommendation = useMemo(() => lookup ? rankJourneyRecommendations(lookup, fix) : null, [lookup, fix]);
 
   // A new navigation request (camera, home planner, landmark guide) replaces the current selection.
   const requestKey = `${params.originId ?? ''}|${params.destinationId ?? ''}|${params.originRequest ?? ''}`;
@@ -47,7 +76,7 @@ export function JourneyMap() {
     setFocusMode('journey');
     setFocusRequest((value) => value + 1);
   }
-  useEffect(() => () => locationRequest.current?.abort(), []);
+  useEffect(() => () => { locationRequest.current?.abort(); locationRequest.current = null; }, []);
 
   const plan = originId && destinationId ? planJourney(originId, destinationId) : null;
   const option = plan?.status === 'planned' ? plan.options[Math.min(selected, plan.options.length - 1)] : undefined;
@@ -66,12 +95,13 @@ export function JourneyMap() {
     if (location.status === 'ready' || location.status === 'inaccurate') {
       setFix(location.fix);
       const nearest = nearestPlace(PLANNER_PLACES, location.fix.coordinates.latitude, location.fix.coordinates.longitude);
-      if (nearest && nearest.meters <= NEAREST_LANDMARK_LIMIT_M) {
+      if (usableFix(location.fix) && nearest && nearest.meters <= NEAREST_LANDMARK_LIMIT_M) {
         choose(setOriginId)(nearest.place.id);
         setLocationMessage(`Nearest supported landmark: ${nearest.place.name}, about ${formatDistance(nearest.meters)} away (straight line).`);
       } else {
         setFocusMode('user'); setFocusRequest((value) => value + 1);
-        setLocationMessage('You are not near a supported Makati landmark. Choose your starting point yourself.');
+        setLocationMessage(location.status === 'inaccurate' ? 'GPS is approximate. Your selected starting landmark is unchanged; choose it manually.'
+          : 'You are not near a supported Makati landmark. Choose your starting point yourself.');
       }
     } else setLocationMessage(location.status === 'denied'
       ? 'Location permission is off. Choose your starting landmark yourself.'
@@ -88,7 +118,7 @@ export function JourneyMap() {
       <View style={styles.legend}>{[[theme.green, 'Start'], [theme.teal, 'Board / get off'], [theme.orange, 'Destination'], [theme.gold, 'You']].map(([color, label]) =>
         <View key={label} style={ui.row}><View style={[styles.dot, { backgroundColor: color }]} /><ThemedText type="small">{label}</ThemedText></View>)}</View>
       {marker && <Card style={{ gap: 6 }}>
-        <ThemedText type="smallBold">{marker.name}</ThemedText>
+        <ThemedText type="smallBold">{marker.name}{marker.approximate ? ' (approximate)' : ''}</ThemedText>
         {marker.routeNames?.map((name) => <ThemedText type="small" key={name}>{name}</ThemedText>)}
         {marker.details?.map((text) => <ThemedText type="small" themeColor="textSecondary" key={text}>{text}</ThemedText>)}
         <Button secondary icon="close" onPress={() => setMarker(null)}>Close</Button>
@@ -113,6 +143,22 @@ export function JourneyMap() {
             <ThemedText type="small" themeColor="textSecondary" style={{ paddingTop: 10 }}>{locationMessage}</ThemedText>
           </Card>
           {!desktop && mapView}
+          {loadingGuidance && <ThemedText>Loading local published guidance...</ThemedText>}
+          {storageError && <Card><ThemedText>Could not read the local transportation database.</ThemedText><Button secondary onPress={() => setLookupAttempt((value) => value + 1)}>Retry local data</Button></Card>}
+          {lookup?.status === 'no-routes' && <ThemedText>No published pilot journey is bundled for this pair. Mapped options below need independent review.</ThemedText>}
+          {lookup?.status === 'already-at-destination' && <ThemedText>You selected the same starting place and destination.</ThemedText>}
+          {lookup?.status === 'incomplete-guidance' && <ThemedText>Published guidance for this pair is incomplete. Do not treat it as a confirmed trip.</ThemedText>}
+          {(lookup?.status === 'unsupported-origin' || lookup?.status === 'unsupported-destination') && <ThemedText>Select a location from the supported catalog.</ThemedText>}
+          {recommendation?.rankedOptions.map(({ option, distanceMeters }) => <Card key={`${option.route.id}:${option.boardingPoint.id}`}>
+            <ThemedText type="smallBold">Published-source guidance: {option.route.name}</ThemedText>
+            <ThemedText>{option.originWalkingInstructions ?? 'Exact entrance-to-boarding access is unconfirmed.'}</ThemedText>
+            <ThemedText>Board: {option.boardingPoint.name}. {option.boardingInstructions}</ThemedText>
+            <ThemedText>Get off: {option.route.alightingLocation}. {option.route.alightingInstructions}</ThemedText>
+            <ThemedText>{option.route.destinationWalkingInstructions ?? 'Final entrance access is unconfirmed.'}</ThemedText>
+            <ThemedText type="small">{distanceMeters === null ? 'Confirmed boarding distance is unavailable.' : `${Math.round(distanceMeters)} m straight-line from GPS, not walking distance.`}</ThemedText>
+            <ThemedText type="small" themeColor="textSecondary">{option.route.limitations}</ThemedText>
+          </Card>)}
+          {plan && <ThemedText type="small" themeColor="textSecondary">Map-derived candidates below are separate from published pilot guidance. Boarding points and walking estimates have not been field-confirmed.</ThemedText>}
           {plan ? <JourneyOptions plan={plan} selected={selected} onSelect={(index) => { setSelected(index); setMarker(null); refocus(); }} />
             : <View style={ui.row}><Icon name="shield" size={18} /><ThemedText type="small" themeColor="textSecondary" style={{ flex: 1 }}>Choose both places to see how to get there.</ThemedText></View>}
         </View>

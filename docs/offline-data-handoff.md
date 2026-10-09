@@ -70,8 +70,10 @@ The issue `boarding-coordinates-unavailable` alone does not block a ready manual
 - Uncovered pairs such as RCBC Plaza to Power Plant Mall return `no-routes`.
 - Same-ID selections return `already-at-destination` after validating both IDs.
 - Invalid IDs return their respective unsupported status.
-- Dataset metadata is version 6; schema is version 3.
+- Dataset metadata is version 7; schema is version 3.
 
-See [web recommendations](./data/web-recommendations.md) for the six bundled suggestions and presentation requirements. Refer to the deferred verification checklist before Android demonstration.
+See [web recommendations](./data/web-recommendations.md) for the eight bundled origin-destination suggestions and presentation requirements. Refer to the deferred verification checklist before Android demonstration.
 
 See [backend-completion.md](./backend-completion.md) for the unified recommendation API, coverage report, and latest research limits.
+
+Dataset 7 adds source-based SM Makati-to-Circuit and Glorietta-to-Circuit suggestions using the One Ayala bus leg and published access connections. The native Ride and Map use the shared recommendation facade; mapped/inferred planner routes remain separately labeled and are not treated as confirmed stops.

@@ -1,6 +1,6 @@
 # Web-sourced pilot recommendations
 
-Dataset 6 bundles six recommendation records using two named directional bus legs and four onward walking variants. These are not six distinct bus services. All 14 places remain in the catalog; uncovered combinations still return `no-routes`.
+Dataset 7 bundles six recommendation records using two named directional bus legs and four onward walking variants. These are not six distinct bus services. All 14 places remain in the catalog; uncovered combinations still return `no-routes`.
 
 The user authorized web-sourced suggestions without physical visits. `source-based` results now expose recommendations alongside evidence, limitations, and missing-detail flags. Their unresolved access/boarding flags remain false; they are not promoted to fully confirmed `available` guidance.
 
@@ -28,3 +28,5 @@ Eligibility requires published/verified leg evidence, source/date, explicit limi
 Pass `false` as the third argument to `lookupTransportation()` or second argument to `listDestinationsForOrigin()` for complete guidance only. Those calls currently return incomplete guidance/empty filtered lists. Default calls accept explicitly labeled source-based suggestions.
 
 No historical or unsupported journey was added. This increment changes dataset content and lookup policy, not evidence-verification verdicts. No schema changes, ML assets, screens, dependencies, or network runtime were added. Checks remain paused at the user's request.
+
+Dataset 7 also links SM Makati and Glorietta to the One Ayala loading area for the existing Circuit-bound leg. These are access-plus-bus suggestions, not additional bus services. The [Globe terminal guide](https://www.globe.com.ph/blog/one-ayala-terminal-guide) identifies SM Store footbridges and the Glorietta 5 lobby as entries; complete entrance-to-bay paths and current access remain unconfirmed.
