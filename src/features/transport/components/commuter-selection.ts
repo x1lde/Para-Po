@@ -2,10 +2,11 @@ export type RideModeFilter = 'all' | 'jeepney' | 'e-jeep' | 'tricycle' | 'bus';
 
 type RouteOptionWithMode = { route: { transportationType: string } };
 
-export function excludeCurrentOrigin<T extends { id: string }>(
+export function getDestinationChoices<T extends { id: string }>(
   destinations: readonly T[],
-  originId: string
+  originId?: string
 ): T[] {
+  if (!originId) return [...destinations];
   return destinations.filter((destination) => destination.id !== originId);
 }
 

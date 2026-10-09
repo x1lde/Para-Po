@@ -20,7 +20,7 @@ const iconNames = {
   arrowLeft: { ios: 'arrow.left', android: 'arrow_back', web: 'arrow_left' },
   camera: { ios: 'camera.viewfinder', android: 'photo_camera', web: 'photo_camera' },
   location: { ios: 'location', android: 'location_on', web: 'location_on' },
-  destination: { ios: 'mappin.and.ellipse', android: 'place', web: 'place' },
+  destination: { ios: 'flag.fill', android: 'flag', web: 'flag' },
   info: { ios: 'info.circle', android: 'info', web: 'info' },
   chevronRight: { ios: 'chevron.right', android: 'chevron_right', web: 'chevron_right' },
   close: { ios: 'xmark', android: 'close', web: 'close' },
@@ -41,7 +41,8 @@ export function AppIcon({ name, size, color }: { name: AppIconName; size: number
 export function AppHeader() {
   const colors = useAppColors();
   const { width } = useWindowDimensions();
-  const wideWeb = Platform.OS === 'web' && width >= 700;
+  const compactHeader = width < 360;
+  const wideWeb = Platform.OS === 'web' && width >= 1024;
   const network = useNetworkState();
   const networkText = network.isInternetReachable === true
     ? 'Online'
@@ -53,19 +54,19 @@ export function AppHeader() {
   const networkColor = networkText === 'Online' ? colors.success : networkText === 'Offline' ? colors.error : colors.gold;
 
   return (
-    <View style={[styles.header, wideWeb ? styles.wideWebHeader : null]}>
+    <View style={[styles.header, compactHeader ? styles.compactHeader : null, wideWeb ? styles.wideWebHeader : null]}>
       {!wideWeb ? (
         <View style={styles.brandRow}>
           <View style={[styles.brandMark, { backgroundColor: colors.primary }]}>
             <AppIcon name="tram" size={20} color={colors.primaryText} />
           </View>
           <View style={styles.brandCopy}>
-            <Text accessibilityRole="header" style={[styles.brandName, { color: colors.text }]}>Para Po</Text>
+            <Text accessibilityRole="header" style={[styles.brandName, { color: colors.text }]}>Para po!</Text>
             <Text style={[styles.brandCaption, { color: colors.textSecondary }]}>Your Makati ride guide</Text>
           </View>
         </View>
       ) : null}
-      <View style={styles.statusStack} accessibilityLabel={`Network ${networkText}. Map data unavailable.`}>
+      <View style={[styles.statusStack, compactHeader ? styles.compactStatusStack : null]} accessibilityLabel={`Network ${networkText}. Map data unavailable.`}>
         <StatusPill icon="wifi" label={networkText} color={networkColor} />
         <StatusPill icon="map" label="Map unavailable" color={colors.textSecondary} />
       </View>
@@ -243,6 +244,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: Space.three,
   },
+  compactHeader: { minHeight: 104, flexDirection: 'column', alignItems: 'stretch', justifyContent: 'center', gap: Space.two, paddingVertical: Space.two },
   wideWebHeader: { minHeight: 116, paddingTop: 88, justifyContent: 'flex-end' },
   brandRow: { flexDirection: 'row', alignItems: 'center', gap: Space.three, flexShrink: 1 },
   brandMark: { width: 42, height: 42, borderRadius: Radius.medium, alignItems: 'center', justifyContent: 'center' },
@@ -250,15 +252,16 @@ const styles = StyleSheet.create({
   brandName: { fontSize: 20, lineHeight: 24, fontWeight: '800', letterSpacing: -0.3 },
   brandCaption: { fontSize: 12, lineHeight: 16 },
   statusStack: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'flex-end', gap: Space.two, flexShrink: 1 },
-  statusPill: { minHeight: 32, borderWidth: 1, borderRadius: Radius.pill, paddingHorizontal: Space.three, flexDirection: 'row', alignItems: 'center', gap: Space.two },
-  statusText: { fontSize: 12, lineHeight: 16, fontWeight: '600' },
+  compactStatusStack: { justifyContent: 'flex-start' },
+  statusPill: { minHeight: 36, borderWidth: 1, borderRadius: Radius.pill, paddingHorizontal: Space.three, flexDirection: 'row', alignItems: 'center', gap: Space.two },
+  statusText: { fontSize: 13, lineHeight: 18, fontWeight: '600' },
   scrollContent: { paddingBottom: 128, flexGrow: 1 },
   content: { width: '100%', maxWidth: MaxContentWidth, alignSelf: 'center', padding: Space.four, gap: Space.four },
   kicker: { fontSize: 14, lineHeight: 20, fontWeight: '700' },
   card: { borderWidth: 1, borderRadius: Radius.card, padding: Space.four, gap: Space.three },
   bodyText: { fontSize: 16, lineHeight: 24 },
   routeField: { minHeight: 72, borderWidth: 1, borderRadius: Radius.medium, paddingHorizontal: Space.three, paddingVertical: Space.two, flexDirection: 'row', alignItems: 'center', gap: Space.three },
-  fieldIcon: { width: 38, height: 38, borderRadius: Radius.small, alignItems: 'center', justifyContent: 'center' },
+  fieldIcon: { width: 42, height: 42, borderRadius: Radius.medium, alignItems: 'center', justifyContent: 'center' },
   fieldCopy: { flex: 1, gap: 3 },
   fieldLabel: { fontSize: 12, lineHeight: 16, fontWeight: '600' },
   fieldValue: { fontSize: 16, lineHeight: 22, fontWeight: '700' },

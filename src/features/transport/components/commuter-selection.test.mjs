@@ -1,11 +1,27 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { excludeCurrentOrigin, filterOptionsByMode } from './commuter-selection.ts';
+import { filterOptionsByMode, getDestinationChoices } from './commuter-selection.ts';
 
-test('destination choices exclude the selected origin', () => {
-  const destinations = [{ id: 'one-ayala' }, { id: 'circuit' }];
-  assert.deepEqual(excludeCurrentOrigin(destinations, 'one-ayala'), [{ id: 'circuit' }]);
+test('destination choices are available before origin selection', () => {
+  const destinations = [
+    { id: 'one-ayala' },
+    { id: 'circuit' },
+    { id: 'powerplant-mall' },
+  ];
+  assert.deepEqual(getDestinationChoices(destinations), destinations);
+});
+
+test('destination choices exclude only the origin and retain destinations without a route from it', () => {
+  const destinations = [
+    { id: 'one-ayala' },
+    { id: 'circuit' },
+    { id: 'powerplant-mall' },
+  ];
+  assert.deepEqual(getDestinationChoices(destinations, 'one-ayala'), [
+    { id: 'circuit' },
+    { id: 'powerplant-mall' },
+  ]);
 });
 
 test('mode filters match exact stored transport types', () => {

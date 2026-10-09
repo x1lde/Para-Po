@@ -17,7 +17,7 @@ import { Colors, MaxContentWidth, Radius, Space } from '@/constants/theme';
 
 export default function AppTabs() {
   const { width } = useWindowDimensions();
-  const compact = width < 700;
+  const compact = width < 1024;
 
   return (
     <Tabs>
@@ -76,7 +76,7 @@ function CustomTabList(props: TabListProps & { compact: boolean }) {
         props.style,
       ]}>
       <ThemedView type="backgroundElement" style={[styles.inner, compact ? styles.innerCompact : null]}>
-        {!compact && <ThemedText type="smallBold" themeColor="primary">PARA PO</ThemedText>}
+        {!compact && <ThemedText type="smallBold" themeColor="primary">Para po!</ThemedText>}
         {props.children}
         {!compact && <ThemedText type="small" themeColor="textSecondary">Makati commute guide</ThemedText>}
       </ThemedView>

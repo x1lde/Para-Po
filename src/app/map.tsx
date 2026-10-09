@@ -45,8 +45,8 @@ function LegendItem({ color, label }: { color: string; label: string }) {
 }
 
 const styles = StyleSheet.create({
-  content: { gap: Space.four, paddingTop: Space.four },
-  intro: { gap: Space.two, paddingBottom: Space.two },
+  content: { gap: Space.four, paddingTop: Space.two },
+  intro: { gap: Space.two },
   iconTile: { width: 52, height: 52, borderRadius: Radius.medium, alignItems: 'center', justifyContent: 'center' },
   legend: { borderTopWidth: 1, borderBottomWidth: 1, paddingVertical: Space.three, gap: Space.two },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: Space.three },

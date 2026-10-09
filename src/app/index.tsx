@@ -2,8 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
 
 import { AppIcon, BodyText, Card, Kicker, PrimaryButton, RouteField, ScreenFrame, VehiclePixelArt, typography, useAppColors } from '@/components/commuter-ui';
-import { commuterDataAvailable, commuterDataUnavailableMessage, listDestinationsForOrigin, listLandmarks, lookupTransportation } from '@/features/transport/components/commuter-data';
-import { filterOptionsByMode, excludeCurrentOrigin, type RideModeFilter } from '@/features/transport/components/commuter-selection';
+import { commuterDataAvailable, commuterDataUnavailableMessage, listDestinations, listLandmarks, lookupTransportation } from '@/features/transport/components/commuter-data';
+import { filterOptionsByMode, getDestinationChoices, type RideModeFilter } from '@/features/transport/components/commuter-selection';
 import type { BoardingOption, Destination, Landmark, TransportLookupResult, TransportationType } from '@/features/transport/types';
 import { Radius, Space } from '@/constants/theme';
 
@@ -25,7 +25,7 @@ const modeFilters: { id: RideModeFilter; label: string }[] = [
 export default function RideScreen() {
   const colors = useAppColors();
   const { width } = useWindowDimensions();
-  const wide = width >= 900;
+  const wide = width >= 1024;
   const [picker, setPicker] = useState<PickerKind | null>(null);
   const [placeQuery, setPlaceQuery] = useState('');
   const [scanOpen, setScanOpen] = useState(false);
@@ -36,7 +36,7 @@ export default function RideScreen() {
   const [origin, setOrigin] = useState<Landmark | null>(null);
   const [destination, setDestination] = useState<Destination | null>(null);
   const [destinations, setDestinations] = useState<Destination[]>([]);
-  const [destinationState, setDestinationState] = useState<DestinationState>('idle');
+  const [destinationState, setDestinationState] = useState<DestinationState>(commuterDataAvailable ? 'loading' : 'error');
   const [destinationAttempt, setDestinationAttempt] = useState(0);
   const [screen, setScreen] = useState<ScreenState>('planning');
   const [lookupState, setLookupState] = useState<LookupState>('idle');
@@ -58,19 +58,18 @@ export default function RideScreen() {
     return () => { active = false; };
   }, [catalogAttempt]);
 
-  const originId = origin?.id;
   useEffect(() => {
     let active = true;
-    if (!originId || !commuterDataAvailable) return () => { active = false; };
-    listDestinationsForOrigin(originId, true).then((items) => {
+    if (!commuterDataAvailable) return () => { active = false; };
+    listDestinations().then((items) => {
       if (!active) return;
-      setDestinations(excludeCurrentOrigin(items, originId));
+      setDestinations(items);
       setDestinationState('ready');
     }).catch(() => {
       if (active) setDestinationState('error');
     });
     return () => { active = false; };
-  }, [originId, destinationAttempt]);
+  }, [destinationAttempt]);
 
   const clearPreviousRoute = () => {
     lookupRequest.current += 1;
@@ -90,10 +89,8 @@ export default function RideScreen() {
     if (picker === 'origin') {
       const nextOrigin = place as Landmark;
       if (nextOrigin.id !== origin?.id) {
-        setDestinations([]);
-        setDestinationState('loading');
         setOrigin(nextOrigin);
-        setDestination(null);
+        setDestination((current) => current?.id === nextOrigin.id ? null : current);
         clearPreviousRoute();
       }
     } else if (picker === 'destination') {
@@ -143,8 +140,8 @@ export default function RideScreen() {
           <View style={styles.planner}>
             <View style={styles.intro}>
               <Kicker>Makati commute guide</Kicker>
-              <Text accessibilityRole="header" style={[typography.pageTitle, { color: colors.text }]}>Where are you headed?</Text>
-              <BodyText>Choose a starting landmark and a destination from the offline route catalog.</BodyText>
+              <Text accessibilityRole="header" style={[typography.pageTitle, width < 360 ? styles.compactPageTitle : null, { color: colors.text }]}>Saan ka papunta?</Text>
+              <BodyText>Piliin muna ang landmark na malapit sa iyo.</BodyText>
             </View>
 
             <Pressable
@@ -516,9 +513,10 @@ function PlacePicker({
   const isOrigin = kind === 'origin';
   const title = isOrigin ? 'Nasaan ka ngayon?' : 'Saan ang punta?';
   const state = isOrigin ? catalogState : destinationState;
-  const places: Place[] = isOrigin ? landmarks : destinations;
+  const places: Place[] = isOrigin
+    ? landmarks
+    : getDestinationChoices(destinations, origin?.id);
   const filtered = places.filter((place) => place.name.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()));
-  const needsOrigin = !isOrigin && !origin;
 
   return (
     <Modal visible={kind !== null} transparent animationType="none" onRequestClose={onClose}>
@@ -539,20 +537,19 @@ function PlacePicker({
             <TextInput accessibilityLabel={`Search ${isOrigin ? 'starting points' : 'destinations'}`} placeholder="Search Makati places" placeholderTextColor={colors.textSecondary} value={query} onChangeText={onQueryChange} style={[styles.searchInput, { color: colors.text }]} />
           </View>
           <ScrollView style={styles.placeList} keyboardShouldPersistTaps="handled">
-            {needsOrigin ? <PickerEmpty title="Choose a starting point first" copy="Destinations are limited to places with route records from your selected landmark." /> : null}
-            {!needsOrigin && state === 'loading' ? <PickerLoading /> : null}
-            {!needsOrigin && state === 'error' ? (
+            {state === 'loading' ? <PickerLoading /> : null}
+            {state === 'error' ? (
               <PickerEmpty title={commuterDataAvailable ? 'Couldn’t read the offline place catalog' : 'Offline places unavailable here'} copy={commuterDataAvailable ? 'Your current selection is unchanged. Retry loading the local SQLite data.' : commuterDataUnavailableMessage}>
                 {commuterDataAvailable ? <ActionButton label="Try again" onPress={isOrigin ? onRetryLandmarks : onRetryDestinations} /> : null}
               </PickerEmpty>
             ) : null}
-            {!needsOrigin && state === 'ready' && filtered.length === 0 ? (
+            {state === 'ready' && filtered.length === 0 ? (
               <PickerEmpty
-                title={query.trim() ? 'No matching places' : isOrigin ? 'No landmarks available' : 'No supported destinations'}
-                copy={query.trim() ? 'Try another name or clear your search.' : isOrigin ? 'The offline catalog has no landmarks to choose.' : 'No route-supported destination is listed for this starting point.'}
+                title={query.trim() ? 'No matching places' : isOrigin ? 'No landmarks available' : 'No destinations available'}
+                copy={query.trim() ? 'Try another name or clear your search.' : isOrigin ? 'The offline catalog has no landmarks to choose.' : 'The offline catalog has no destinations to choose.'}
               />
             ) : null}
-            {!needsOrigin && state === 'ready' ? filtered.map((place) => (
+            {state === 'ready' ? filtered.map((place) => (
               <Pressable key={place.id} accessibilityRole="button" onPress={() => onChoose(place)} style={({ pressed }) => [styles.placeChoice, { borderColor: colors.border }, pressed && styles.pressed]}>
                 <View style={[styles.placeChoiceIcon, { backgroundColor: colors.backgroundSelected }]}>
                   <AppIcon name={isOrigin ? 'location' : 'destination'} size={18} color={colors.primary} />
@@ -611,9 +608,10 @@ function transportLabel(type: TransportationType): string {
 const styles = StyleSheet.create({
   mainLayout: { width: '100%', gap: Space.four },
   wideLayout: { flexDirection: 'row', alignItems: 'flex-start', gap: Space.seven },
-  planner: { flex: 1, minWidth: 0, gap: Space.four },
-  intro: { gap: Space.two, paddingTop: Space.four, paddingBottom: Space.two },
-  scanCard: { borderWidth: 1, minHeight: 90, borderRadius: Radius.card, paddingHorizontal: Space.four, paddingVertical: Space.three, flexDirection: 'row', alignItems: 'center', gap: Space.three },
+  planner: { flex: 0.85, minWidth: 300, gap: Space.four },
+  intro: { gap: Space.two, paddingTop: Space.two },
+  compactPageTitle: { fontSize: 32, lineHeight: 38, letterSpacing: -0.5 },
+  scanCard: { borderWidth: 1, minHeight: 96, borderRadius: Radius.card, paddingHorizontal: Space.four, paddingVertical: Space.three, flexDirection: 'row', alignItems: 'center', gap: Space.three },
   scanIcon: { width: 48, height: 48, borderRadius: Radius.medium, alignItems: 'center', justifyContent: 'center' },
   scanCopy: { flex: 1, gap: Space.one },
   scanTitle: { fontSize: 18, lineHeight: 23, fontWeight: '800' },
@@ -629,7 +627,7 @@ const styles = StyleSheet.create({
   typeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: Space.two },
   typePill: { borderWidth: 1, borderRadius: Radius.medium, minHeight: 58, paddingHorizontal: Space.two, paddingVertical: Space.two, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Space.one },
   typeText: { fontSize: 14, lineHeight: 18, fontWeight: '600' },
-  previewColumn: { flex: 0.92, minWidth: 300, paddingTop: Space.four },
+  previewColumn: { flex: 1.65, minWidth: 300, paddingTop: Space.four },
   previewTitleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   mapPlaceholder: { minHeight: 300, borderWidth: 1, borderRadius: Radius.medium, alignItems: 'center', justifyContent: 'center', padding: Space.seven, gap: Space.two },
   mapPlaceholderIcon: { width: 52, height: 52, borderRadius: Radius.medium, alignItems: 'center', justifyContent: 'center', marginBottom: Space.two },

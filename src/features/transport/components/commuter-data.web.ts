@@ -7,6 +7,10 @@ export async function listLandmarks(): Promise<Landmark[]> {
   throw new Error(commuterDataUnavailableMessage);
 }
 
+export async function listDestinations(): Promise<Destination[]> {
+  throw new Error(commuterDataUnavailableMessage);
+}
+
 export async function listDestinationsForOrigin(_landmarkId: string, _includeSourceBased = true): Promise<Destination[]> {
   throw new Error(commuterDataUnavailableMessage);
 }

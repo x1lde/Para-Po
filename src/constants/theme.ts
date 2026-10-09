@@ -76,4 +76,4 @@ export const Space = {
 
 export const Radius = { small: 8, medium: 12, card: 20, large: 24, pill: 999 } as const;
 export const BottomTabInset = Platform.select({ ios: 50, android: 80 }) ?? 0;
-export const MaxContentWidth = 1120;
+export const MaxContentWidth = 1200;
