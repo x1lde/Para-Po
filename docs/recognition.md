@@ -7,6 +7,8 @@ The Ride screen opens a native camera scanner on demand. It requests camera perm
 
 Malformed model scores return `inference-failed`; failed SQLite candidate lookups return `catalog-unavailable`. Neither rejects the recognition promise. Camera configuration enables still-photo access without adding Android audio recording permission. Native capture, inference speed, and airplane-mode behavior still require device checks.
 
+Score validation rejects the entire output if any probability is non-finite or outside 0–1, and rejects invalid confidence thresholds. A corrupted score is never silently discarded while another class is accepted. These checks do not establish recognition accuracy; held-out images and device evaluation remain necessary.
+
 Audit-fix validation: TypeScript and lint pass; 10 mocked recognition checks, 13 offline-data checks, 11 map-scene checks, nine mocked location checks, and 13 selection/layout/integration tests pass. Android Hermes and web static exports include the scanner flow and platform fallback. These do not compile the native libraries or validate actual device capture/inference. The recognition check loader normalizes Windows paths so repository mocks resolve consistently.
 
 ## Use it

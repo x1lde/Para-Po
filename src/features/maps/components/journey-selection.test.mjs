@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { chooseBoardingOption, selectJourneyDestination, selectJourneyOrigin } from './journey-selection.ts';
+import { chooseBoardingOption, findJourneyOption, selectJourneyDestination, selectJourneyOrigin } from './journey-selection.ts';
 
 test('changing origin preserves a different destination and drops stale route details', () => {
   assert.deepEqual(selectJourneyOrigin({
@@ -29,4 +29,13 @@ test('a shared boarding point retains the selected eligible route', () => {
   assert.equal(chooseBoardingOption([first, selected, other], 'other', 'chosen'), other);
   assert.equal(chooseBoardingOption([first, selected], 'shared', 'removed'), first);
   assert.equal(chooseBoardingOption([first, selected], 'missing', 'chosen'), undefined);
+});
+
+test('Ride resolves the shared map choice by both route and stop IDs', () => {
+  const first = { route: { id: 'route' }, boardingPoint: { id: 'first' } };
+  const selected = { route: { id: 'route' }, boardingPoint: { id: 'chosen' } };
+  const journey = { originId: 'origin', destinationId: 'destination', routeId: 'route', boardingPointId: 'chosen' };
+  assert.equal(findJourneyOption([first, selected], journey), selected);
+  assert.equal(findJourneyOption([first, selected], { ...journey, boardingPointId: 'removed' }), undefined);
+  assert.equal(findJourneyOption([first, selected], null), undefined);
 });

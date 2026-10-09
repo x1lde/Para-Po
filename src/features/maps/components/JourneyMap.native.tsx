@@ -14,12 +14,11 @@ import { ChoicePicker } from './ChoicePicker';
 import { TransportMap } from './TransportMap';
 import { loadMapJourney } from './journey-loader';
 import { useMapJourney } from './journey-context';
-import { chooseBoardingOption, selectJourneyDestination, selectJourneyOrigin } from './journey-selection';
+import { chooseBoardingOption, findJourneyOption, selectJourneyDestination, selectJourneyOrigin } from './journey-selection';
 import { router } from 'expo-router';
 
 export function JourneyMap() {
   const { journey, setJourney } = useMapJourney();
-  const [selectionUnavailable, setSelectionUnavailable] = useState(false);
   const [origins, setOrigins] = useState<Landmark[]>([]);
   const [destinations, setDestinations] = useState<Destination[]>([]);
   const [originId, setOriginId] = useState('');
@@ -31,34 +30,30 @@ export function JourneyMap() {
   const [locating, setLocating] = useState(false);
   const [locationMessage, setLocationMessage] = useState('GPS is optional. You can select your starting landmark manually.');
   const [selectedMarker, setSelectedMarker] = useState<MapMarker | null>(null);
-  const [selectedBoardingId, setSelectedBoardingId] = useState<string | null>(null);
-  const [selectedRouteId, setSelectedRouteId] = useState<string | undefined>();
   const [hasRequestedLocation, setHasRequestedLocation] = useState(false);
   const [focusRequest, setFocusRequest] = useState(0);
   const [focusMode, setFocusMode] = useState<'journey' | 'user'>('journey');
   const selectionSequence = useRef(0);
   const locationSequence = useRef(0);
   const locationRequest = useRef<AbortController | null>(null);
-  const loadJourney = useCallback(async (origin: string, requestedDestination = '', routeId?: string, boardingPointId?: string) => {
+  const loadJourney = useCallback(async (origin: string, requestedDestination = '') => {
     const sequence = ++selectionSequence.current;
-    setLoading(true); setError(false); setSelectionUnavailable(false); setResult(null); setOriginId(origin); setDestinationId(requestedDestination); setFocusMode('journey');
-    setSelectedBoardingId(boardingPointId ?? null); setSelectedRouteId(routeId);
+    setLoading(true); setError(false); setResult(null); setOriginId(origin); setDestinationId(requestedDestination); setFocusMode('journey');
     try {
-      const next = await loadMapJourney({ originId: origin, destinationId: requestedDestination, routeId, boardingPointId });
+      const next = await loadMapJourney({ originId: origin, destinationId: requestedDestination });
       if (selectionSequence.current !== sequence) return;
       setOrigins(next.landmarks); setDestinations(next.destinations); setDestinationId(next.destinationId); setResult(next.result);
-      setSelectedBoardingId(next.selectedOption?.boardingPoint.id ?? null);
-      setSelectedRouteId(next.selectedOption?.route.id);
-      setSelectionUnavailable(next.selectionUnavailable);
       setFocusRequest((value) => value + 1);
     } catch { if (selectionSequence.current === sequence) setError(true); }
     finally { if (selectionSequence.current === sequence) setLoading(false); }
   }, []);
+  const requestedOriginId = journey?.originId ?? '';
+  const requestedDestinationId = journey?.destinationId ?? '';
   useEffect(() => {
     let active = true;
-    void Promise.resolve().then(() => { if (active) void loadJourney(journey?.originId ?? '', journey?.destinationId ?? '', journey?.routeId, journey?.boardingPointId); });
+    void Promise.resolve().then(() => { if (active) void loadJourney(requestedOriginId, requestedDestinationId); });
     return () => { active = false; selectionSequence.current += 1; };
-  }, [loadJourney, journey]);
+  }, [loadJourney, requestedOriginId, requestedDestinationId]);
   useEffect(() => () => { locationSequence.current += 1; locationRequest.current?.abort(); }, []);
   useEffect(() => {
     if (!fix) return;
@@ -89,19 +84,23 @@ export function JourneyMap() {
       : location.status === 'timeout' ? 'GPS timed out. Try outdoors or select a landmark manually.'
       : 'GPS unavailable. Manual selection still works.');
   };
+  const options = result && 'options' in result ? result.options : [];
+  const selectedOption = findJourneyOption(options, journey);
+  const selectedRouteId = selectedOption?.route.id;
+  const selectedBoardingId = selectedOption?.boardingPoint.id ?? null;
+  const selectionUnavailable = !loading && !error && Boolean(journey?.routeId && !selectedOption);
+  const fullScene = useMemo(() => result ? buildMapScene(result, BUNDLED_ROUTE_GEOMETRIES, MAP_PLACE_REFERENCES)
+    : { markers: [], routes: [], omittedLocations: [] } as MapScene, [result]);
   const scene = useMemo(() => {
     const mapResult = result && 'options' in result && selectedRouteId
       ? { ...result, options: result.options.filter((option) => option.route.id === selectedRouteId && option.boardingPoint.id === selectedBoardingId) }
       : result;
-    const base: MapScene = mapResult ? buildMapScene(mapResult, BUNDLED_ROUTE_GEOMETRIES, MAP_PLACE_REFERENCES)
-      : { markers: [], routes: [], omittedLocations: [] };
+    const base = mapResult ? buildMapScene(mapResult, BUNDLED_ROUTE_GEOMETRIES, MAP_PLACE_REFERENCES) : fullScene;
     return withUserLocation(base, fix);
-  }, [result, fix, selectedRouteId, selectedBoardingId]);
-  const options = result && 'options' in result ? result.options : [];
+  }, [result, fullScene, fix, selectedRouteId, selectedBoardingId]);
   const ranked = rankBoardingOptions(options, fix);
   const boardingPoints = [...new Map(ranked.map((item) => [item.option.boardingPoint.id, item.option.boardingPoint])).values()];
   const selectOption = (option: BoardingOption) => {
-    setSelectedBoardingId(option.boardingPoint.id); setSelectedRouteId(option.route.id);
     setJourney((current) => current?.originId === originId && current.destinationId === destinationId &&
       current.routeId === option.route.id && current.boardingPointId === option.boardingPoint.id ? current : {
         originId, destinationId, routeId: option.route.id, boardingPointId: option.boardingPoint.id,
@@ -144,7 +143,7 @@ export function JourneyMap() {
       {fix?.accuracyMeters !== null && fix?.accuracyMeters !== undefined && <ThemedText type="small">Purple area: reported GPS uncertainty, about {Math.round(fix.accuracyMeters)} m. It is not a walking radius.</ThemedText>}
       {loading && <ActivityIndicator accessibilityLabel="Loading journey" />}
       {error && <><ThemedText>Could not load local transportation data.</ThemedText><Pressable accessibilityRole="button" style={styles.button}
-        onPress={() => void loadJourney(originId, destinationId, selectedRouteId, selectedBoardingId ?? undefined)}><ThemedText type="link">Retry data</ThemedText></Pressable></>}
+        onPress={() => void loadJourney(originId, destinationId)}><ThemedText type="link">Retry data</ThemedText></Pressable></>}
       {!loading && !error && destinations.length === 0 && <ThemedText>No destinations are available in the local catalog.</ThemedText>}
       {!loading && !error && (!originId || !destinationId) && <ThemedText>Choose a starting landmark and destination here, or select a ride on Ride to open its map. No journey is selected yet.</ThemedText>}
       {selectionUnavailable && <ThemedText accessibilityLiveRegion="polite">The previously selected ride is no longer available for this journey. Review the current options below.</ThemedText>}
@@ -159,7 +158,7 @@ export function JourneyMap() {
         <ThemedText type="smallBold">Where to board</ThemedText>
         <ThemedText type="small">Stops serving this destination. Tap a stop to highlight its guidance.</ThemedText>
         {boardingPoints.map((point) => {
-          const marker = scene.markers.find((item) => item.id === `boarding:${point.id}`);
+          const marker = fullScene.markers.find((item) => item.id === `boarding:${point.id}`);
           const matching = ranked.filter((item) => item.option.boardingPoint.id === point.id);
           const distance = matching.find((item) => item.distanceMeters !== null)?.distanceMeters;
           return <Pressable key={point.id} accessibilityRole="button" accessibilityState={{ selected: selectedBoardingId === point.id }}
@@ -171,6 +170,7 @@ export function JourneyMap() {
             <ThemedText type="smallBold">{point.name}</ThemedText>
             <ThemedText type="small">{[...new Set(matching.map((item) => item.option.route.name))].join(' · ')}</ThemedText>
             <ThemedText type="small">{distance === undefined || distance === null ? 'Distance unavailable' : `${Math.round(distance)} m straight-line from GPS`}</ThemedText>
+            {marker && !scene.markers.some((item) => item.id === marker.id) && <ThemedText type="small">Position recorded. Select this stop to show it on the map.</ThemedText>}
             {!marker && <ThemedText type="small">Confirmed map position unavailable. Use the boarding instructions below.</ThemedText>}
           </Pressable>;
         })}
@@ -184,7 +184,7 @@ export function JourneyMap() {
       {ranked.map(({ option, distanceMeters }, index) => <ThemedView type="backgroundElement" style={[styles.card, selectedBoardingId === option.boardingPoint.id && styles.selected]} key={`${option.route.id}:${option.boardingPoint.id}`}>
         <Pressable accessibilityRole="button" accessibilityState={{ selected: selectedRouteId === option.route.id }} style={styles.button} onPress={() => {
           selectOption(option);
-          setSelectedMarker(scene.markers.find((marker) => marker.id === `boarding:${option.boardingPoint.id}`) ?? null);
+          setSelectedMarker(fullScene.markers.find((marker) => marker.id === `boarding:${option.boardingPoint.id}`) ?? null);
         }}><ThemedText type="link">{selectedRouteId === option.route.id ? 'Selected option' : 'Select this option'}</ThemedText></Pressable>
         <ThemedText type="smallBold">{option.route.name}</ThemedText>
         <ThemedText type="small">Vehicle: {option.route.transportationType}</ThemedText>

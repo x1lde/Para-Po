@@ -23,10 +23,10 @@ import argparse
 import csv
 import json
 import os
-import random
 import re
-from collections import Counter, defaultdict
+from collections import Counter
 from pathlib import Path
+from dataset_split import split_group_indices
 
 os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "2")
 
@@ -89,24 +89,10 @@ def load_dataset(data_dir, labels_csv, min_per_class):
 
 
 def group_split(y, groups, num_classes, val_fraction, seed):
-    """Per class, move whole groups into val until it holds ~val_fraction of that class."""
-    rng = random.Random(seed)
+    """Assign whole groups globally, including videos spanning multiple classes."""
+    _, validation = split_group_indices(y.tolist(), groups, val_fraction, seed)
     val = np.zeros(len(y), bool)
-    for c in range(num_classes):
-        idx = np.where(y == c)[0]
-        by_group = defaultdict(list)
-        for i in idx:
-            by_group[groups[i]].append(i)
-        keys = list(by_group)
-        rng.shuffle(keys)
-        target, taken = max(1, round(len(idx) * val_fraction)), 0
-        for k in keys:
-            if taken >= target:
-                break
-            if taken and taken + len(by_group[k]) > target * 1.5 and len(keys) > 1:
-                continue  # skip a group that would overshoot badly
-            val[by_group[k]] = True
-            taken += len(by_group[k])
+    val[validation] = True
     return ~val, val
 
 

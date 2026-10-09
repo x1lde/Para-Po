@@ -8,7 +8,7 @@ import { filterOptionsByMode, getDestinationChoices, type RideModeFilter } from 
 import type { BoardingOption, Destination, Landmark, TransportLookupResult, TransportationType } from '@/features/transport/types';
 import { Radius, Space } from '@/constants/theme';
 import { useMapJourney } from '@/features/maps/components/journey-context';
-import { selectJourneyDestination, selectJourneyOrigin } from '@/features/maps/components/journey-selection';
+import { findJourneyOption, selectJourneyDestination, selectJourneyOrigin } from '@/features/maps/components/journey-selection';
 import { ridePlannerMinWidth } from '@/features/transport/components/responsive-layout';
 import { TransportMap } from '@/features/maps/components/TransportMap';
 import { ScanLandmark } from '@/features/recognition/components/ScanLandmark';
@@ -58,6 +58,38 @@ export default function RideScreen() {
   const currentPairRef = useRef(currentPair);
   useEffect(() => { currentPairRef.current = currentPair; }, [currentPair]);
   const visibleScreen = screen !== 'planning' && lookupPair !== currentPair ? 'planning' : screen;
+  const lookupSnapshot = useRef({ pair: lookupPair, state: lookupState, result: lookupResult });
+  useEffect(() => { lookupSnapshot.current = { pair: lookupPair, state: lookupState, result: lookupResult }; }, [lookupPair, lookupState, lookupResult]);
+  const sharedOriginId = journey?.originId;
+  const sharedDestinationId = journey?.destinationId;
+  const sharedRouteId = journey?.routeId;
+  const sharedBoardingPointId = journey?.boardingPointId;
+  const resolvedOriginId = selectedOrigin?.id;
+  const resolvedDestinationId = selectedDestination?.id;
+  useEffect(() => {
+    if (!commuterDataAvailable || !sharedRouteId || !sharedBoardingPointId ||
+        !sharedOriginId || !sharedDestinationId || resolvedOriginId !== sharedOriginId || resolvedDestinationId !== sharedDestinationId) return;
+    let active = true;
+    void Promise.resolve().then(async () => {
+      if (!active) return;
+      const cached = lookupSnapshot.current;
+      if (cached.pair === currentPair && cached.state === 'ready') {
+        setScreen('boarding');
+        return;
+      }
+      const request = ++lookupRequest.current;
+      setLookupPair(currentPair); setLookupState('loading'); setLookupResult(null); setScreen('options');
+      try {
+        const result = await lookupTransportation(sharedOriginId, sharedDestinationId, true);
+        if (!active || request !== lookupRequest.current) return;
+        setLookupResult(result); setLookupState('ready'); setScreen('boarding');
+      } catch {
+        if (active && request === lookupRequest.current) setLookupState('error');
+      }
+    });
+    return () => { active = false; };
+  }, [sharedOriginId, sharedDestinationId, sharedRouteId, sharedBoardingPointId, resolvedOriginId, resolvedDestinationId, currentPair]);
+
 
   useEffect(() => {
     if (!commuterDataAvailable) return;
@@ -132,7 +164,8 @@ export default function RideScreen() {
 
   const findRide = async () => {
     if (!selectedOrigin || !selectedDestination || selectedDestination.id === selectedOrigin.id) return;
-    setJourney({ originId: selectedOrigin.id, destinationId: selectedDestination.id });
+    setJourney((current) => current?.originId === selectedOrigin.id && current.destinationId === selectedDestination.id
+      ? current : { originId: selectedOrigin.id, destinationId: selectedDestination.id });
     const requestId = ++lookupRequest.current;
     const requestedPair = `${selectedOrigin.id}\u0000${selectedDestination.id}`;
     setLookupPair(requestedPair);
@@ -162,7 +195,7 @@ export default function RideScreen() {
     [currentOptions, modeFilter]
   );
   const currentSelectedRide = journey
-    ? currentOptions.find((option) => option.route.id === journey.routeId && option.boardingPoint.id === journey.boardingPointId) ?? null
+    ? findJourneyOption(currentOptions, journey) ?? null
     : selectedRide;
 
   return (

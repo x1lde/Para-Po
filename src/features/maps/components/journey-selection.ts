@@ -25,3 +25,10 @@ export function chooseBoardingOption<T extends { route: { id: string }; boarding
   return options.find((option) => option.boardingPoint.id === boardingPointId && option.route.id === selectedRouteId)
     ?? options.find((option) => option.boardingPoint.id === boardingPointId);
 }
+
+/** Match the complete route/stop pair, not just a route shared by several stops. */
+export function findJourneyOption<T extends { route: { id: string }; boardingPoint: { id: string } }>(
+  options: readonly T[], selection: MapJourneySelection | null
+): T | undefined {
+  return options.find((option) => option.route.id === selection?.routeId && option.boardingPoint.id === selection?.boardingPointId);
+}

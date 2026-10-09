@@ -143,7 +143,13 @@ async function main() {
     assert.equal(other.kind, 'not-a-landmark');
     assert.equal(other.candidates[0].label, 'rcbc_plaza');
     assert.throws(() => scoring.interpretScores(new Float32Array(3), LABELS, t, OTHER), /3 scores/);
-    assert.throws(() => scoring.interpretScores(new Float32Array(LABELS.length).fill(NaN), LABELS, t, OTHER), /no finite/);
+    assert.throws(() => scoring.interpretScores(new Float32Array(LABELS.length).fill(NaN), LABELS, t, OTHER), /invalid probability/);
+    for (const invalid of [NaN, Infinity, -0.1, 1.5]) {
+      const malformed = scoresFor({ greenbelt: 0.99 });
+      malformed[0] = invalid;
+      assert.throws(() => scoring.interpretScores(malformed, LABELS, t, OTHER), /invalid probability/);
+    }
+    assert.throws(() => scoring.interpretScores(scoresFor({ greenbelt: 0.99 }), LABELS, NaN, OTHER), /threshold/);
   });
 
   await check('center crop keeps the training framing (224 of 256 on the short side)', async () => {

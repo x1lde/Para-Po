@@ -10,13 +10,16 @@ import { accuracyCircle } from '../services/accuracy-circle';
 export default function NativeMapSurface({ scene, onRetry, focusRequest = 0, focusMode = 'journey', onMarkerPress, selectedMarkerId, selectedRouteId }: TransportMapProps & { onRetry: () => void }) {
   const [status, setStatus] = useState<'loading' | 'ready' | 'failed'>('loading');
   const camera = useRef<CameraRef>(null);
+  const sceneRef = useRef(scene);
+  useEffect(() => { sceneRef.current = scene; }, [scene]);
   useEffect(() => {
     if (status !== 'ready') return;
-    const user = scene.markers.find((marker) => marker.kind === 'user');
-    const view = focusMode === 'user' && user ? { center: user.coordinate, zoom: 15 } : getMapViewport(scene, false);
+    const currentScene = sceneRef.current;
+    const user = currentScene.markers.find((marker) => marker.kind === 'user');
+    const view = focusMode === 'user' && user ? { center: user.coordinate, zoom: 15 } : getMapViewport(currentScene, false);
     if ('bounds' in view) camera.current?.fitBounds(view.bounds, { padding: view.padding, duration: 500 });
     else camera.current?.flyTo({ ...view, duration: 500 });
-  }, [focusRequest, focusMode, scene, status]);
+  }, [focusRequest, focusMode, status]);
   useEffect(() => {
     if (status !== 'loading') return;
     const timer = setTimeout(() => setStatus('failed'), 20000);

@@ -23,9 +23,16 @@ export function interpretScores(
   if (scores.length !== labels.length) {
     throw new Error(`Model returned ${scores.length} scores for ${labels.length} labels.`);
   }
+  if (!Number.isFinite(threshold) || threshold < 0 || threshold > 1) {
+    throw new Error('Confidence threshold must be between 0 and 1.');
+  }
+  for (let index = 0; index < scores.length; index += 1) {
+    if (!Number.isFinite(scores[index]) || scores[index] < 0 || scores[index] > 1) {
+      throw new Error('Model returned invalid probability scores.');
+    }
+  }
   const ranked: LabelScore[] = labels
     .map((label, index) => ({ label, confidence: scores[index] }))
-    .filter((score) => Number.isFinite(score.confidence))
     .sort((a, b) => b.confidence - a.confidence || a.label.localeCompare(b.label));
   if (ranked.length === 0) throw new Error('Model returned no finite scores.');
 

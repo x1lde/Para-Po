@@ -100,3 +100,8 @@ The previous README's "85% top-1" isn't comparable: it came from a random split 
 
 - **Biggest win:** team phone photos. The weak classes are SM Makati exterior shots (41%), Ayala Center (33%, which is really an umbrella for its malls), Glorietta (57%) and RCBC Plaza (55%). About 30 photos each from street level, the way a commuter would hold the phone, would help more than any further scraping.
 - **Google Street View:** `fetch_google.py` can add exterior viewpoints of every building once an API key is available.
+# Training split regression checks
+
+Run `python -m unittest discover -s ml -p test_dataset_split.py` from the project root. The tests do not load TensorFlow or train a model. They verify deterministic, globally disjoint source groups across multiple seeds using synthetic fixtures and the committed label catalog. Videos shared by different landmark classes are assigned wholly to training or validation. Splitting fails explicitly if every class cannot retain examples on both sides.
+
+`train.py` uses `dataset_split.py` for future training runs. This fix does not retrain, replace, or recalibrate the already bundled model; its existing reported metrics remain associated with the earlier training run.
