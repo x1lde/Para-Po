@@ -22,6 +22,23 @@ export function centerCropRect(width: number, height: number, fraction = MODEL_C
   };
 }
 
+/**
+ * Square sizes to resize through, ending at `size`: one step of less than 2x down to size*2^k, then exact
+ * halvings. Android resizes with plain bilinear sampling (Bitmap.createScaledBitmap), so shrinking a phone
+ * photo's ~2,600 px crop to 224 px in one step reads 4 of every ~140 source pixels and aliases fine detail
+ * such as window grids into moire. A 2x bilinear step averages each 2x2 block exactly, so the chain comes
+ * close to the antialiased downscale the model was trained with. On phone-resolution photos, the one-step
+ * resize cut top-1 accuracy from 73% to 45%, while this chain matched the training resize (ml/README.md).
+ */
+export function resizeSteps(side: number, size: number): number[] {
+  if (!(side > 0 && size > 0)) throw new Error('Image has no size.');
+  let first = size;
+  while (first * 2 <= side) first *= 2;
+  const steps = [first];
+  while (steps[steps.length - 1] > size) steps.push(steps[steps.length - 1] / 2);
+  return steps;
+}
+
 const BASE64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
 const BASE64_LOOKUP = new Uint8Array(128).fill(255);
 for (let i = 0; i < BASE64.length; i += 1) BASE64_LOOKUP[BASE64.charCodeAt(i)] = i;
@@ -57,6 +74,34 @@ export function pixelsToTensor(pixels: Uint8Array, width: number, height: number
   return tensor;
 }
 
+export type PhotoIssue = 'too-dark' | 'too-bright' | 'low-detail';
+
+// Luminance limits (0-255). Every one of the 6,361 real training images has a mean of at least 9.6, at
+// most 224, and a spread (standard deviation) of at least 16.9, so these only catch frames no landmark
+// photo looks like: a covered lens, a black or white screen, a blank wall.
+export const MIN_MEAN_LUMINANCE = 6;
+export const MAX_MEAN_LUMINANCE = 245;
+export const MIN_LUMINANCE_SPREAD = 8;
+
+/** Reject frames with nothing to recognize before they reach the model, which must not guess on them. */
+export function assessPhoto(tensor: Float32Array): PhotoIssue | null {
+  const pixels = Math.floor(tensor.length / 3);
+  if (pixels === 0) return 'low-detail';
+  let sum = 0, sumSquares = 0;
+  for (let i = 0; i < pixels * 3; i += 3) {
+    const luminance = 0.299 * tensor[i] + 0.587 * tensor[i + 1] + 0.114 * tensor[i + 2];
+    sum += luminance;
+    sumSquares += luminance * luminance;
+  }
+  const mean = sum / pixels;
+  const spread = Math.sqrt(Math.max(0, sumSquares / pixels - mean * mean));
+  if (!Number.isFinite(mean) || !Number.isFinite(spread)) return 'low-detail';
+  if (mean < MIN_MEAN_LUMINANCE) return 'too-dark';
+  if (mean > MAX_MEAN_LUMINANCE) return 'too-bright';
+  if (spread < MIN_LUMINANCE_SPREAD) return 'low-detail';
+  return null;
+}
+
 /** Photo URI -> model input tensor [size, size, 3] (float32 RGB 0-255, not normalized). */
 export async function imageToModelInput(uri: string, size = MODEL_INPUT_SIZE): Promise<Float32Array> {
   const context = ImageManipulator.manipulate(uri);
@@ -64,10 +109,10 @@ export async function imageToModelInput(uri: string, size = MODEL_INPUT_SIZE): P
   try {
     const original = await context.renderAsync();
     refs.push(original);
-    const resized = await context
-      .crop(centerCropRect(original.width, original.height))
-      .resize({ width: size, height: size })
-      .renderAsync();
+    const crop = centerCropRect(original.width, original.height);
+    let chain = context.crop(crop);
+    for (const step of resizeSteps(crop.width, size)) chain = chain.resize({ width: step, height: step });
+    const resized = await chain.renderAsync();
     refs.push(resized);
     // Expo modules expose no raw pixels; a max-quality JPEG round trip is the lightest path and
     // matches the JPEG images the model was trained on.

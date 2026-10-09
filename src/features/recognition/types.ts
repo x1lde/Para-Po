@@ -1,4 +1,7 @@
 import type { Landmark } from '@/features/transport/types';
+import type { PhotoIssue } from './services/preprocess';
+
+export type { PhotoIssue };
 
 export interface RecognitionCandidate {
   landmark: Landmark;
@@ -30,8 +33,13 @@ export type RecognitionResult =
       candidates: RecognitionCandidate[];
     }
   | {
+      /** Too dark, too bright or featureless (e.g. covered lens) to recognize; the model was not run. Retake. */
+      status: 'unclear-photo';
+      issue: PhotoIssue;
+    }
+  | {
       status: 'unavailable';
-      reason: 'unsupported-platform' | 'model-load-failed' | 'image-unreadable' | 'inference-failed';
+      reason: 'unsupported-platform' | 'model-load-failed' | 'image-unreadable' | 'inference-failed' | 'landmark-lookup-failed';
       error?: unknown;
     };
 
