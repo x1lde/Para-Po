@@ -12,6 +12,7 @@
     "expo-font": "~57.0.4",
     "expo-glass-effect": "~57.0.4",
     "expo-image": "~57.0.5",
+    "expo-image-manipulator": "~57.0.21",
     "expo-linking": "~57.0.12",
     "expo-location": "~57.0.20",
     "expo-network": "~57.0.2",
@@ -22,10 +23,13 @@
     "expo-symbols": "~57.0.3",
     "expo-system-ui": "~57.0.4",
     "expo-web-browser": "~57.0.3",
+    "jpeg-js": "^0.4.4",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-native": "0.86.3",
+    "react-native-fast-tflite": "^3.0.1",
     "react-native-gesture-handler": "~2.32.0",
+    "react-native-nitro-modules": "^0.37.1",
     "react-native-reanimated": "4.5.1",
     "react-native-safe-area-context": "~5.7.0",
     "react-native-screens": "~4.26.0",
@@ -47,7 +51,8 @@
     "lint": "expo lint",
     "check:offline-data": "node scripts/check-offline-data.cjs",
     "check:maps": "node scripts/check-map-scene.cjs",
-    "check:location": "node scripts/check-location.cjs"
+    "check:location": "node scripts/check-location.cjs",
+    "check:recognition": "node scripts/check-recognition.cjs"
   },
   "private": true
 }

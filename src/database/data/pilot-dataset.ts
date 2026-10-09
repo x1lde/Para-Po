@@ -18,6 +18,25 @@ const places = [
   ['salcedo_weekend_market', 'Salcedo Weekend Market'],
 ] as const;
 
+// Output labels of the bundled recognition model (assets/models/landmark_model.json, from ml/).
+// Its extra "other" class means "not a supported landmark" and has no place.
+const modelClassificationLabels: Readonly<Record<(typeof places)[number][0], string>> = {
+  ayala_center: 'ayala_center',
+  avida_makati_southpoint: 'avida_towers_makati_southpoint',
+  ayala_malls_circuit: 'ayala_malls_circuit',
+  st_john_bosco_parish: 'st_john_bosco_parish',
+  rcbc_plaza: 'rcbc_plaza',
+  sm_makati: 'sm_makati',
+  landmark_makati: 'the_landmark_makati',
+  greenbelt: 'greenbelt',
+  glorietta: 'glorietta',
+  powerplant_mall: 'powerplant_mall',
+  makati_city_hall: 'makati_city_hall',
+  ayala_museum: 'ayala_museum',
+  one_ayala: 'one_ayala',
+  salcedo_weekend_market: 'salcedo_weekend_market',
+};
+
 const sourceReference = 'https://www.topgear.com.ph/news/motoring-news/p2p-2026-circuit-makati-one-ayala-a2619-20260428';
 const accessReference = 'https://thebeat.asia/manila/nomads/explore/ayala-center-malls-guide';
 
@@ -55,10 +74,10 @@ const onwardRoutes = onwardJourneys.map<TransportationRoute>((journey) => ({
 
 /** Web-sourced pilot suggestions; verification flags and unknown coordinates remain explicit. */
 export const pilotDataset: TransportDataset = {
-  version: 4,
-  sourceNotes: 'Underscore-separated landmark and destination IDs; 14 user-supplied Makati places after removing Manila Premiere Wines due to insufficient training images; 6 web-sourced recommendation records using 2 published directional bus legs and 4 onward walking variants. Sources: April 28 2026 P2P report and February 24 2026 mall connection guide, reviewed 2026-10-09. Combined bus-plus-walk journeys are explicitly assembled from separate sources. Unknown coordinates/labels remain null and access/boarding flags remain false. See docs/data/web-recommendations.md. No field verification or guaranteed current operation is claimed.',
+  version: 5,
+  sourceNotes: 'Underscore-separated landmark and destination IDs; 14 user-supplied Makati places after removing Manila Premiere Wines due to insufficient training images; 6 web-sourced recommendation records using 2 published directional bus legs and 4 onward walking variants. Sources: April 28 2026 P2P report and February 24 2026 mall connection guide, reviewed 2026-10-09. Combined bus-plus-walk journeys are explicitly assembled from separate sources. Landmark classification labels map recognition model outputs. Unknown coordinates remain null and access/boarding flags remain false. See docs/data/web-recommendations.md. No field verification or guaranteed current operation is claimed.',
   landmarks: places.map(([id, name]) => ({
-    id, name, latitude: null, longitude: null, classificationLabel: null,
+    id, name, latitude: null, longitude: null, classificationLabel: modelClassificationLabels[id],
   })),
   destinations: places.map(([id, name]) => ({ id, name, latitude: null, longitude: null })),
   boardingPoints: [

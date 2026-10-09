@@ -32,6 +32,15 @@ export async function findLandmark(id: string): Promise<Landmark | null> {
   );
 }
 
+/** Landmark whose classification label matches a recognition model output label. */
+export async function findLandmarkByClassificationLabel(label: string): Promise<Landmark | null> {
+  const db = await getDatabase();
+  return db.getFirstAsync<Landmark>(
+    `SELECT id, name, latitude, longitude, classification_label AS classificationLabel
+     FROM landmarks WHERE classification_label = ?`, label
+  );
+}
+
 export async function findDestination(id: string): Promise<Destination | null> {
   const db = await getDatabase();
   return db.getFirstAsync<Destination>(
