@@ -2,12 +2,13 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 export PATH="$HOME/.local/bin:$PATH"
-mkdir -p "$HOME/.agents/skills" "$HOME/.codex/skills" "$HOME/.claude/skills" "$HOME/.local/bin"
+mkdir -p "$HOME/.agents/skills" "$HOME/.codex/skills" "$HOME/.claude/skills" "$HOME/.gemini/skills" "$HOME/.local/bin"
 tar -xzf .devcontainer/skills.tar.gz -C "$HOME/.agents/skills"
 for skill in "$HOME/.agents/skills"/*; do
   name="$(basename "$skill")"
   ln -sfn "$skill" "$HOME/.codex/skills/$name"
   ln -sfn "$skill" "$HOME/.claude/skills/$name"
+  ln -sfn "$skill" "$HOME/.gemini/skills/$name"
 done
 
 # Install the official Linux Supabase release (npm global install is unsupported).
@@ -24,5 +25,5 @@ uv venv --python 3.12 .venv
 sed 's/tensorflow\[and-cuda\]/tensorflow/' ml/requirements.txt > /tmp/para-po-cpu-requirements.txt
 uv pip install --python .venv/bin/python -r /tmp/para-po-cpu-requirements.txt
 uv pip install --python .venv/bin/python python-docx openpyxl pypdf pdfplumber python-pptx reportlab
-node .devcontainer/install-plugins.cjs
 bash .devcontainer/verify.sh
+node .devcontainer/install-plugins.cjs

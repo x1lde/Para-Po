@@ -2,7 +2,7 @@
 
 This environment reproduces the inventoried Linux development tools,  local skills, Codex plugins, Claude plugins, and compatible VS Code extensions. The manifest is `local-inventory.json`. Skills and Codex plugins are snapshots of installed packages, including their supporting resources; original notices remain inside the archives. Account credentials and private machine configuration are not included.
 
-The image installs Node 22, Bun, Codex, Claude Code, Devin, Vercel, EAS, Expo Doctor, Expo tunnel support, uv, Python, document utilities and build tools. Features provide GitHub CLI and Docker. Setup installs Supabase, runs `npm ci`, and creates `.venv` with CPU TensorFlow and document libraries. Expo CLI comes from the project's SDK 57 dependency.
+The image installs Node 22, Bun, Codex, Claude Code, Devin, Antigravity CLI (`agy`), Vercel, EAS, Expo Doctor, Expo tunnel support, uv, Python, document utilities and build tools. Features provide GitHub CLI and Docker. Setup installs Supabase, runs `npm ci`, and creates `.venv` with CPU TensorFlow and document libraries. Expo CLI comes from the project's SDK 57 dependency. Antigravity supports [headless CLI use](https://www.antigravity.google/docs/cli/install/).
 
 Open this repository in Codespaces using `.devcontainer/devcontainer.json`. Setup ends with tool checks, lint and TypeScript checks. Run `bash .devcontainer/verify.sh` to repeat verification. Plugin installation failures are recorded in `plugin-install-results.json`; retry with `node .devcontainer/install-plugins.cjs` after authentication.
 

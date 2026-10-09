@@ -221,6 +221,7 @@
     "google-drive--google-sheets",
     "google-drive--google-slides",
     "imagegen",
+    "impeccable",
     "migrate-radix-to-base",
     "openai-docs",
     "openai-templates--artifact-template-analytics-dashboard",
@@ -395,5 +396,34 @@
     "Native iOS simulator and laptop hardware utilities cannot run in Linux Codespaces.",
     "App OAuth connections, CLI accounts and secrets require authentication inside Codespaces.",
     "CUDA training is unavailable on standard Codespaces; Python environment uses CPU TensorFlow."
-  ]
+  ],
+  "clis": [
+    "node",
+    "npm",
+    "bun",
+    "bunx",
+    "git",
+    "gh",
+    "docker",
+    "codex",
+    "claude",
+    "devin",
+    "agy",
+    "vercel",
+    "eas",
+    "expo-doctor",
+    "supabase",
+    "uv",
+    "uvx",
+    "python3",
+    "rg",
+    "jq",
+    "ffmpeg",
+    "pdftoppm",
+    "tesseract",
+    "libreoffice",
+    "pandoc",
+    "cmake"
+  ],
+  "privateSyncedSkills": "Account-synced Claude skills require account sync or private transfer; they are not published to the repository."
 }
