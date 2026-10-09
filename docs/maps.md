@@ -41,6 +41,12 @@ Run `npm run lint`, `npx tsc --noEmit`, `npm run check:maps`, and `npm run check
 
 ### Map usability additions
 
+Audit follow-up: map retry creates a fresh lazy-loading attempt instead of reusing a rejected lazy promise. Opening marker details preserves the selected route, including when several eligible routes share a boarding point. Explicit map option choices update shared journey state; the Ride screen resolves boarding details from that shared choice. Closing marker details does not clear the selected ride.
+
+Second audit follow-up: the map loads catalog/lookup data only when the origin or destination changes or the user explicitly retries. Route/stop selection is resolved from the current lookup and shared journey state without another map database load. Camera movements depend on explicit focus requests, focus mode, and map readiness rather than every scene update. Stop summaries check the complete eligible scene for known positions; a confirmed stop hidden by the selected option is labeled as selectable for display rather than missing coordinates. Ride automatically resolves an incoming selected journey and opens boarding details even if its own lookup has not yet run; refreshing the same pair preserves the shared route selection.
+
+Second audit validation: TypeScript, lint, Android Hermes export, and web static export pass. The checks total 61: 10 recognition, 13 offline-data, 11 map-scene, nine location, 14 selection/layout/integration, and four Python split tests. Native tab handoff, stop-summary interaction, and camera movement still require device checks. The bundled model remains unchanged.
+
 The latest screen changes add a marker legend, clearer journey controls, and selectable boarding-point summaries below the map. Summaries are derived only from eligible local lookup results, remain visible without map connectivity or confirmed coordinates, and explicitly label unavailable distances and positions. Selecting a stop highlights its recommendation cards and its marker when a confirmed marker exists. Selecting a route option also highlights its sourced vehicle geometry when supplied; the bundled geometry registry remains empty.
 
 A foreground GPS fix with a positive finite reported accuracy produces a geographic uncertainty polygon in metres around the user marker. Unknown or zero accuracy has no polygon. The shaded area reports device uncertainty, not a guaranteed boundary or walking radius. Expired fixes remove the position and area together.

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Platform } from 'react-native';
 
 import { loadLandmarkModel, recognizeLandmark } from '../services/recognition-service';
@@ -9,9 +9,15 @@ export function useLandmarkRecognition(): {
   state: RecognizerState;
   recognize: (photoUri: string) => Promise<RecognitionResult>;
 } {
+  const mounted = useRef(true);
   const [state, setState] = useState<RecognizerState>(
     Platform.OS === 'web' ? { status: 'unavailable', reason: 'unsupported-platform' } : { status: 'loading' }
   );
+
+  useEffect(() => {
+    mounted.current = true;
+    return () => { mounted.current = false; };
+  }, []);
 
   useEffect(() => {
     if (Platform.OS === 'web') return;
@@ -27,6 +33,7 @@ export function useLandmarkRecognition(): {
 
   const recognize = useCallback(async (photoUri: string) => {
     const result = await recognizeLandmark(photoUri);
+    if (!mounted.current) return result;
     if (result.status === 'unavailable' && result.reason === 'model-load-failed') {
       setState({ status: 'unavailable', reason: 'model-load-failed', error: result.error });
     } else if (result.status !== 'unavailable') {
