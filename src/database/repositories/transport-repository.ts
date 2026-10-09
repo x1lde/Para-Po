@@ -42,6 +42,11 @@ interface BoardingOptionRow {
   routeName: string;
   transportationType: TransportationType;
   destinationId: string;
+  alightingLocation: string | null;
+  alightingInstructions: string | null;
+  destinationWalkingInstructions: string | null;
+  originWalkingInstructions: string | null;
+  boardingInstructions: string | null;
   boardingPointId: string;
   boardingPointName: string;
   latitude: number;
@@ -56,6 +61,11 @@ export async function findBoardingOptions(
   const rows = await db.getAllAsync<BoardingOptionRow>(
     `SELECT r.id AS routeId, r.name AS routeName,
             r.transportation_type AS transportationType, r.destination_id AS destinationId,
+            r.alighting_location AS alightingLocation,
+            r.alighting_instructions AS alightingInstructions,
+            r.destination_walking_instructions AS destinationWalkingInstructions,
+            lb.walking_instructions AS originWalkingInstructions,
+            rb.boarding_instructions AS boardingInstructions,
             b.id AS boardingPointId, b.name AS boardingPointName, b.latitude, b.longitude
      FROM transportation_routes r
      JOIN route_boarding_points rb ON rb.route_id = r.id
@@ -71,6 +81,9 @@ export async function findBoardingOptions(
       name: row.routeName,
       transportationType: row.transportationType,
       destinationId: row.destinationId,
+      alightingLocation: row.alightingLocation,
+      alightingInstructions: row.alightingInstructions,
+      destinationWalkingInstructions: row.destinationWalkingInstructions,
     },
     boardingPoint: {
       id: row.boardingPointId,
@@ -78,5 +91,7 @@ export async function findBoardingOptions(
       latitude: row.latitude,
       longitude: row.longitude,
     },
+    originWalkingInstructions: row.originWalkingInstructions,
+    boardingInstructions: row.boardingInstructions,
   }));
 }

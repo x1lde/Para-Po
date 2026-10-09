@@ -52,8 +52,22 @@ Rows derived from Mapcarta cite their individual pages, which identify underlyin
 
 ## Before using these rows in SQLite
 
+### Follow-up source review
+
+The [claim review worksheet](./source-review.csv) records ten specific findings and their limits. `source-supported` there means the cited page explicitly supports that particular fact; it does not promote the whole journey to `verified`. All field-verification dates remain blank. There are still no substantiated loading-bay coordinates.
+
+New primary evidence includes the [IOM visitor directions](https://philippines.iom.int/sites/g/files/tmzbdl1651/files/documents/2024-04/mhc-location-map-and-route.pdf): indexed text identifies Makati Loop-Landmark at Gate 4 and a Landmark departure near Greenbelt 3. The PDF itself could not be fetched, so this is explicitly recorded as a search excerpt. It does not confirm the City Hall alighting point.
+
+The [theater's own guide](https://www.circuitperformingartstheater.com/directions-to-the-samsung-performing-arts-theater/) describes Landmark-Puregold travel to JP Rizal/Honradez and subsequent walking toward Circuit. Its page date is 2020-08-27 and its vehicle description is ambiguous. Retain it as historical context; do not substitute it for current City Hall directions.
+
+The [Art Fair organizer's February 2026 guide](https://www.artfairphilippines.com/afp2026/visitorinfo.php) identifies a CityFlats-area P2P drop-off. That event-specific information does not establish the return pickup curb or prove that all listed services still operate. Its generalized route descriptions and travel times were not copied into commuter instructions.
+
+Two conflicts need resolution before seed promotion: [May rider reports](https://www.reddit.com/r/makati/comments/1t6e4fs/p2p_buses_in_ayala_malls_circuitone_ayala/) question the P2P's reliability and terminal information; the [April terminal guide](https://www.spot.ph/newsfeatures/mobility/routes-at-one-ayala-2026-a5229-20260422-bsc) places Washington at UGF while the existing community lead says basement. Neither floor is confirmed. The `one-ayala-washington-basement` ID is retained for worksheet continuity, not as proof of a basement queue.
+
+The [museum's own visitor page](https://www.ayalamuseum.org/visit) confirms its Makati Avenue/De La Rosa address in Greenbelt Park. It does not establish a particular entrance, pedestrian path, or vehicle stop. The remaining Southpoint, parish, City Hall, Salcedo, Powerplant, and wine-shop journey gaps remain as described in their existing worksheet rows; no full journey has been newly certified.
+
 Confirm actual signboards, travel direction, legal boarding/alighting points, exact coordinates, remaining pedestrian access, and source dates. For recent P2P reports, confirm the current operator and service conditions. Preserve findings and evidence in the worksheets, set `verified_on` only after team verification, then promote reviewed records into the bundled seed.
 
-Do not import `destination-access.csv` as routes: hub-plus-walk rows target places different from the bus route's actual terminal. The current runtime contract also does not expose detailed boarding/alighting instruction text; that remains an explicit integration task after verification.
+Do not import `destination-access.csv` as routes: hub-plus-walk rows target places different from the bus route's actual terminal. Schema version 2 can now store reviewed boarding, alighting, and walking instructions; see [offline-data.md](../offline-data.md). That capability does not automatically approve or import research rows.
 
 No tests, lint, typechecks, builds, commits, or pushes were run for this research task.

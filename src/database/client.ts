@@ -1,6 +1,6 @@
 import { openDatabaseAsync, type SQLiteDatabase } from 'expo-sqlite';
 
-import { INITIAL_SCHEMA, SCHEMA_VERSION } from './schema';
+import { COMMUTER_INSTRUCTIONS_MIGRATION, INITIAL_SCHEMA, SCHEMA_VERSION } from './schema';
 import { bundledDataset, seedDatabase } from './seed';
 
 let databasePromise: Promise<SQLiteDatabase> | undefined;
@@ -21,6 +21,11 @@ async function openInitializedDatabase(): Promise<SQLiteDatabase> {
       }
       if (currentVersion === 0) {
         await db.execAsync(INITIAL_SCHEMA);
+      }
+      if (currentVersion < 2) {
+        await db.execAsync(COMMUTER_INSTRUCTIONS_MIGRATION);
+      }
+      if (currentVersion < SCHEMA_VERSION) {
         await db.execAsync(`PRAGMA user_version = ${SCHEMA_VERSION}`);
       }
       await seedDatabase(db, bundledDataset);

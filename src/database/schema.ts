@@ -1,4 +1,4 @@
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
 
 // Static SQL only. Bind values from data or users in runAsync/getAllAsync.
 export const INITIAL_SCHEMA = `
@@ -46,4 +46,14 @@ CREATE TABLE dataset_metadata (
   version INTEGER NOT NULL,
   source_notes TEXT NOT NULL
 );
+`;
+
+// Apply after the version 1 schema, including on a fresh installation.
+// Nullable additions preserve existing rows without inventing instructions.
+export const COMMUTER_INSTRUCTIONS_MIGRATION = `
+ALTER TABLE transportation_routes ADD COLUMN alighting_location TEXT;
+ALTER TABLE transportation_routes ADD COLUMN alighting_instructions TEXT;
+ALTER TABLE transportation_routes ADD COLUMN destination_walking_instructions TEXT;
+ALTER TABLE route_boarding_points ADD COLUMN boarding_instructions TEXT;
+ALTER TABLE landmark_boarding_points ADD COLUMN walking_instructions TEXT;
 `;

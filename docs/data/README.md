@@ -6,6 +6,8 @@ These files are documentation worksheets. The application does not import them, 
 
 Use [destination-access.csv](./destination-access.csv) to review vehicle type, route ID, pickup, alighting, and remaining access together. Its hub-plus-walk combinations are research leads, not direct database routes. Every researched row keeps source links and a retrieval date separate from the blank field-verification date.
 
+Use [source-review.csv](./source-review.csv) for the follow-up claim-by-claim review, including primary-source evidence and conflicting reports. A supported gate or address alone does not verify a complete journey.
+
 ## Complete one journey first
 
 Keep the full candidate catalog and fill verified journeys incrementally:
@@ -49,6 +51,16 @@ Current vehicle types are `jeepney`, `bus`, and `e-bus`. Propose a type change e
 
 Review the worksheets first. Transfer only complete verified records and their required relationships into `bundledDataset`, preserving evidence in `sourceNotes` and these worksheets. Increase the dataset version when changing bundled data. Do not import all candidates blindly or change schema version for a data-only update.
 
-There is no CSV importer in this increment. The existing runtime format is a typed TypeScript object. Detailed access/alighting text is retained here for review; current runtime entities do not yet expose instruction text. Coordinate any required contract extension before presenting those details in the UI.
+There is no CSV importer in this increment. The runtime format is a typed TypeScript object. Schema version 2 supports instructions through these mappings:
+
+| Worksheet field | Runtime field |
+| --- | --- |
+| `routes.csv`: `alighting_location` | `TransportationRoute.alightingLocation` |
+| `routes.csv`: `alighting_instructions` | `TransportationRoute.alightingInstructions` |
+| `routes.csv`: `destination_walking_instructions` | `TransportationRoute.destinationWalkingInstructions` |
+| `route-boarding-points.csv`: `boarding_instructions` | `RouteBoardingPoint.boardingInstructions` |
+| `landmark-boarding-points.csv`: `access_description` | `LandmarkBoardingPoint.walkingInstructions` |
+
+New instruction cells stay blank until supported text is collected. Convert missing instruction cells to explicit `null` when preparing a typed dataset. Do not copy research caveats such as "exact bay unconfirmed" into passenger directions, or present inferred access as verified walking instructions. The lookup exposes origin walking and boarding guidance on each option, and alighting/destination walking guidance on `option.route`.
 
 Runtime verification remains deferred at the user's request.

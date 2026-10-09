@@ -75,20 +75,26 @@ export async function seedDatabase(db: SQLiteDatabase, dataset: TransportDataset
   }
   for (const route of dataset.routes) {
     await db.runAsync(
-      'INSERT INTO transportation_routes (id, name, transportation_type, destination_id) VALUES (?, ?, ?, ?)',
-      route.id, route.name, route.transportationType, route.destinationId
+      `INSERT INTO transportation_routes
+       (id, name, transportation_type, destination_id, alighting_location,
+        alighting_instructions, destination_walking_instructions)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      route.id, route.name, route.transportationType, route.destinationId,
+      route.alightingLocation, route.alightingInstructions, route.destinationWalkingInstructions
     );
   }
   for (const point of dataset.routeBoardingPoints) {
     await db.runAsync(
-      'INSERT INTO route_boarding_points (route_id, boarding_point_id, stop_order) VALUES (?, ?, ?)',
-      point.routeId, point.boardingPointId, point.stopOrder
+      `INSERT INTO route_boarding_points
+       (route_id, boarding_point_id, stop_order, boarding_instructions) VALUES (?, ?, ?, ?)`,
+      point.routeId, point.boardingPointId, point.stopOrder, point.boardingInstructions
     );
   }
   for (const point of dataset.landmarkBoardingPoints) {
     await db.runAsync(
-      'INSERT INTO landmark_boarding_points (landmark_id, boarding_point_id) VALUES (?, ?)',
-      point.landmarkId, point.boardingPointId
+      `INSERT INTO landmark_boarding_points
+       (landmark_id, boarding_point_id, walking_instructions) VALUES (?, ?, ?)`,
+      point.landmarkId, point.boardingPointId, point.walkingInstructions
     );
   }
   await db.runAsync(

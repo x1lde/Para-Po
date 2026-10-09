@@ -27,23 +27,33 @@ export interface TransportationRoute {
   name: string;
   transportationType: TransportationType;
   destinationId: string;
+  /** Null means not yet recorded, never that no alighting or walking is needed. */
+  alightingLocation: string | null;
+  alightingInstructions: string | null;
+  destinationWalkingInstructions: string | null;
 }
 
 export interface RouteBoardingPoint {
   routeId: string;
   boardingPointId: string;
   stopOrder: number;
+  /** Direction/signboard and queue guidance specific to this route at this stop. */
+  boardingInstructions: string | null;
 }
 
 /** A boarding point verified as accessible from this landmark. */
 export interface LandmarkBoardingPoint {
   landmarkId: string;
   boardingPointId: string;
+  walkingInstructions: string | null;
 }
 
 export interface BoardingOption {
   route: TransportationRoute;
   boardingPoint: BoardingPoint;
+  /** Access from the selected origin landmark to this boarding point. */
+  originWalkingInstructions: string | null;
+  boardingInstructions: string | null;
 }
 
 export type TransportLookupResult =

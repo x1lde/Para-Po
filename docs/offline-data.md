@@ -5,7 +5,7 @@ This increment provides SQLite initialization, typed reference data, bundled see
 ## Files and entry points
 
 - `src/features/transport/types.ts`: landmark, destination, boarding point, route, and lookup result contracts.
-- `src/database/schema.ts`: version 1 schema and constraints.
+- `src/database/schema.ts`: initial schema, constraints, and additive version 2 instruction migration.
 - `src/database/seed.ts`: the complete bundled dataset and transactional seed writes.
 - `src/database/client.ts`: lazy `getDatabase()` initialization, cached across concurrent callers. Failed initialization can be retried.
 - `src/database/repositories/transport-repository.ts`: `listLandmarks()`, `listDestinations()`, individual lookups, and origin/destination-filtered boarding options.
@@ -64,7 +64,7 @@ Use `listLandmarks()` for manual fallback selection and `listDestinations()` for
 
 | Result status | Intended UI response |
 | --- | --- |
-| `available` | Show the destination, route name, vehicle type, and eligible boarding locations. |
+| `available` | Show the destination, route name, vehicle type, eligible boarding locations, and recorded commuter instructions. |
 | `unsupported-origin` | Ask the user to select a supported landmark. |
 | `unsupported-destination` | Ask the user to select a supported destination. |
 | `no-routes` | Explain that no verified direct option is available for this combination. |
@@ -73,6 +73,24 @@ Database failures reject the promise and must be handled separately from an empt
 
 GPS-based distance ranking remains for the location/maps branch: filter eligible options before measuring distance, handle missing GPS, and label Haversine results as straight-line distances. Maps must not be a prerequisite for this lookup.
 
+## Commuter instructions (schema version 2)
+
+Instructions are stored offline with the relationship they describe:
+
+| Stored field | Returned field on each boarding option | Responsibility |
+| --- | --- | --- |
+| `landmark_boarding_points.walking_instructions` | `originWalkingInstructions` | Walk from the selected landmark to the boarding point. |
+| `route_boarding_points.boarding_instructions` | `boardingInstructions` | Queue, direction, or signboard guidance for that route at that point. |
+| `transportation_routes.alighting_location` | `route.alightingLocation` | Named place to get off for this directional destination-specific route. |
+| `transportation_routes.alighting_instructions` | `route.alightingInstructions` | Additional reviewed guidance for getting off. |
+| `transportation_routes.destination_walking_instructions` | `route.destinationWalkingInstructions` | Remaining pedestrian access from alighting to the chosen destination entrance. |
+
+Every new field is `string | null`. `null` means unknown or not recorded; it never means that no walking is needed. The UI should label missing guidance as unavailable and must not manufacture a path, walking distance, or time. Store verified no-walk guidance explicitly when applicable. These are authored directions, not computed pedestrian routing. The current model assumes one alighting site per directional destination-specific route; represent different alighting variants separately.
+
+Fresh databases create the original tables and then apply the same version 2 migration used for existing version 1 databases. The migration adds nullable columns without replacing existing rows. Schema changes, the version marker, and any dataset update share the initialization transaction. Existing dataset versions are retained; bump the dataset version separately when adding reviewed instruction content. Older records return `null` for their new fields.
+
+Model training is not required to implement or review these instructions. Keep worksheet classification labels blank until the ML teammate agrees on the mapping. The current landmark contract still requires a label before seed inclusion; it need not come from a finished trained model, but must be explicitly agreed rather than guessed. Manual landmark selection and transport lookup use stable landmark IDs, not inference scores. No label mapping or model asset has been generated here.
+
 ## Deferred verification
 
-Before connecting this to the demo, verify on Android: first launch in airplane mode, repeat initialization, complete pilot lookups, unsupported combinations, invalid seed rollback, and dataset version upgrades. Add isolated synthetic fixtures for tests only; do not put them into the bundled dataset. Check GPS ranking separately when implemented.
+Before connecting this to the demo, verify on Android: first launch in airplane mode, version 1 to 2 migration preserving existing rows, repeat initialization, instruction round-trips and null handling, complete pilot lookups, unsupported combinations, invalid seed rollback, and dataset version upgrades. Add isolated synthetic fixtures for tests only; do not put them into the bundled dataset. Check GPS ranking separately when implemented. Tests, lint, typechecks, and builds remain paused at the user's request; this increment has only received manual source review.
