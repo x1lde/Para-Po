@@ -6,7 +6,6 @@ const places = [
   ['avida-makati-southpoint', 'Avida Towers Makati Southpoint'],
   ['ayala-malls-circuit', 'Ayala Malls Circuit'],
   ['st-john-bosco-parish', 'St. John Bosco Parish'],
-  ['manila-premiere-wines', 'Manila Premiere Wines'],
   ['rcbc-plaza', 'RCBC Plaza'],
   ['sm-makati', 'SM Makati'],
   ['landmark-makati', 'The Landmark Makati'],
@@ -56,8 +55,8 @@ const onwardRoutes = onwardJourneys.map<TransportationRoute>((journey) => ({
 
 /** Web-sourced pilot suggestions; verification flags and unknown coordinates remain explicit. */
 export const pilotDataset: TransportDataset = {
-  version: 2,
-  sourceNotes: '15 user-supplied Makati places; 6 web-sourced recommendation records using 2 published directional bus legs and 4 onward walking variants. Sources: April 28 2026 P2P report and February 24 2026 mall connection guide, reviewed 2026-10-09. Combined bus-plus-walk journeys are explicitly assembled from separate sources. Unknown coordinates/labels remain null and access/boarding flags remain false. See docs/data/web-recommendations.md. No field verification or guaranteed current operation is claimed.',
+  version: 3,
+  sourceNotes: '14 user-supplied Makati places after removing Manila Premiere Wines due to insufficient training images; 6 web-sourced recommendation records using 2 published directional bus legs and 4 onward walking variants. Sources: April 28 2026 P2P report and February 24 2026 mall connection guide, reviewed 2026-10-09. Combined bus-plus-walk journeys are explicitly assembled from separate sources. Unknown coordinates/labels remain null and access/boarding flags remain false. See docs/data/web-recommendations.md. No field verification or guaranteed current operation is claimed.',
   landmarks: places.map(([id, name]) => ({
     id, name, latitude: null, longitude: null, classificationLabel: null,
   })),

@@ -1,10 +1,12 @@
 # Pilot data worksheets
 
-Use these CSV files in a spreadsheet to collect Para-Po's offline reference data. All 15 user-supplied landmark names are retained. Destination rows are candidates based on the same names; they do not assert transportation coverage. Online research now supplies provisional coordinates and route/boarding leads where sources were available. Model labels and unknown details remain blank. Read [research.md](./research.md) for provenance, evidence status, conflicts, and remaining gaps.
+Manila Premiere Wines was removed at the team's request because there are insufficient training images. Dataset version 3 removes it from both runtime catalogs on upgrade; the six recommendations are unchanged.
 
-These files are documentation worksheets, not an automatic importer. Dataset version 1 now bundles the 15-place manual catalog and two scoped published bus legs with pending access flags. Research map candidates, conflicting routes, inferred complete journeys, and ML labels have not been promoted. See [offline-data.md](../offline-data.md) for the current runtime boundary.
+Use these CSV files in a spreadsheet to collect Para-Po's offline reference data. All 14 user-supplied landmark names are retained. Destination rows are candidates based on the same names; they do not assert transportation coverage. Online research now supplies provisional coordinates and route/boarding leads where sources were available. Model labels and unknown details remain blank. Read [research.md](./research.md) for provenance, evidence status, conflicts, and remaining gaps.
 
-Latest update: [dataset 2](./web-recommendations.md) enables six source-based records, including four explicitly combined bus-plus-walk suggestions. Verification flags remain pending; sources and limitations must accompany the separate result status. This supersedes the version 1 storage-only boundary above.
+These files are documentation worksheets, not an automatic importer. Dataset version 1 now bundles the 14-place manual catalog and two scoped published bus legs with pending access flags. Research map candidates, conflicting routes, inferred complete journeys, and ML labels have not been promoted. See [offline-data.md](../offline-data.md) for the current runtime boundary.
+
+Latest update: [dataset 3](./web-recommendations.md) enables six source-based records, including four explicitly combined bus-plus-walk suggestions. Verification flags remain pending; sources and limitations must accompany the separate result status. This supersedes the version 1 storage-only boundary above.
 
 Use [destination-access.csv](./destination-access.csv) to review vehicle type, route ID, pickup, alighting, and remaining access together. Its hub-plus-walk combinations are research leads, not direct database routes. Every researched row keeps source links and a retrieval date separate from the blank field-verification date.
 
@@ -14,7 +16,7 @@ The [remote verification report](./verification-report.md) audits every existing
 
 ## Complete one journey first
 
-The [all-landmark options worksheet](./transportation-options.csv) now covers all 15 candidates with 17 selected option records. Read [coverage-review.md](./coverage-review.md) for the results and limits. It is a research companion, not an importer or a complete routing matrix.
+The [all-landmark options worksheet](./transportation-options.csv) now covers all 14 candidates with 16 selected option records. Read [coverage-review.md](./coverage-review.md) for the results and limits. It is a research companion, not an importer or a complete routing matrix.
 
 Start with the [Circuit to One Ayala journey packet](./first-journey.md). Published boarding and alighting instruction drafts are filled in its worksheet rows; the packet lists the precise observations still needed before verification and seed promotion.
 

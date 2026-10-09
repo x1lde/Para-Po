@@ -1,18 +1,18 @@
 # Remote route and journey verification
 
-Audit date: 2026-10-09. Scope: every existing record in `routes.csv`, `transportation-options.csv`, and `destination-access.csv`. No new origin/destination combinations were invented. There are 43 audited worksheet entries: 11 routes, 17 options, and 15 destination-access entries. The latter two sets overlap and must not be added together as unique journeys.
+Audit date: 2026-10-09. Scope: every existing record in `routes.csv`, `transportation-options.csv`, and `destination-access.csv`. No new origin/destination combinations were invented. There are 41 audited worksheet entries: 11 routes, 16 options, and 14 destination-access entries. The latter two sets overlap and must not be added together as unique journeys.
 
 The [audit CSV](./verification-audit.csv) gives each entry's verdict, precise confirmation scope, supported details, unresolved details, and source IDs. The [source register](./verification-sources.csv) resolves those IDs to direct URLs and records whether full content or only indexed text was available. The original worksheets now carry `verification_status`, `verification_reviewed_on`, and `verification_scope` beside their original research statuses.
 
 ## Results
 
-| Verdict | Routes (11) | Options (17) | Destination-access entries (15) |
+| Verdict | Routes (11) | Options (16) | Destination-access entries (14) |
 | --- | --- | --- | --- |
 | `published-confirmed` | 2 | 1 | 0 |
 | `partially-supported` | 6 | 13 | 12 |
 | `conflicting` | 2 | 2 | 2 |
 | `historical` | 1 | 0 | 0 |
-| `unsupported` | 0 | 1 | 1 |
+| `unsupported` | 0 | 0 | 0 |
 
 ## How verification was judged
 
@@ -54,13 +54,13 @@ The [parish's indexed directions](https://www.w.sjbmakati.com/contact-us.html) g
 
 The [mall connector guide](https://thebeat.asia/manila/nomads/explore/ayala-center-malls-guide) is dated 2026-02-24, resolving the previously unknown date. It supports the One Ayala-to-Landmark mall connection. This is a published walking connection, not a guarantee of uninterrupted current corridor access. Combining it with a bus leg does not automatically confirm a complete Circuit-to-mall journey.
 
-The [community route catalog](https://wiki.openstreetmap.org/wiki/Metro_Manila/Jeepney_and_UV_Express_routes) corroborates the PRC and Libertad corridor names. Catalog route codes were not assigned as official application route numbers. The [wine business's directory](https://www.businesslist.ph/company/304326/manila-premiere-wines) supports an address, not a commuting journey; that option stays unsupported.
+The [community route catalog](https://wiki.openstreetmap.org/wiki/Metro_Manila/Jeepney_and_UV_Express_routes) corroborates the PRC and Libertad corridor names. Catalog route codes were not assigned as official application route numbers.
 
 ## Using the results in Para-Po
 
-Remote MVP policy update: dataset 2 now allows six explicitly labeled `source-based` suggestions, including four assembled bus-plus-walk variants. This is not a change to evidence-verification verdicts. `runtime_ready=false` in this audit refers to fully confirmed guidance under the earlier audit standard, not whether the new policy may display a sourced suggestion. See [web-recommendations.md](./web-recommendations.md).
+Remote MVP policy update: dataset 3 now allows six explicitly labeled `source-based` suggestions, including four assembled bus-plus-walk variants. This is not a change to evidence-verification verdicts. `runtime_ready=false` in this audit refers to fully confirmed guidance under the earlier audit standard, not whether the new policy may display a sourced suggestion. See [web-recommendations.md](./web-recommendations.md).
 
-Implementation update: schema 3/dataset 1 now store the 15-place manual catalog and two scoped vehicle facts as incomplete guidance. The audit's `runtime_ready=false` still means these are not ready complete recommendations. Nullable coordinates and ML labels allow draft catalog storage, not fabricated map points. See [offline-data.md](../offline-data.md); this report's verdicts are unchanged.
+Implementation update: schema 3/dataset 1 now store the 14-place manual catalog and two scoped vehicle facts as incomplete guidance. The audit's `runtime_ready=false` still means these are not ready complete recommendations. Nullable coordinates and ML labels allow draft catalog storage, not fabricated map points. See [offline-data.md](../offline-data.md); this report's verdicts are unchanged.
 
 The [Circuit stop/access follow-up](./circuit-access-research.md) subsequently adds mapped property references, a walking proposal, and transit coordinate candidates. It improves the approach evidence but does not identify the route's exact pickup/unloading points. Verdict counts remain unchanged; none of those candidates was silently assigned to a normalized stop.
 

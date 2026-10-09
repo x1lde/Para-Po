@@ -1,6 +1,6 @@
 # Transportation research coverage
 
-Reviewed online on 2026-10-09. [transportation-options.csv](./transportation-options.csv) has 17 reviewed option records covering all 15 candidates: 16 travel/access leads and one unresolved business-location record. These are selected options, not an exhaustive origin/destination matrix, and not field-verified service.
+Reviewed online on 2026-10-09. [transportation-options.csv](./transportation-options.csv) has 16 reviewed option records covering all 14 candidates: 16 travel/access leads. These are selected options, not an exhaustive origin/destination matrix, and not field-verified service.
 
 All existing records now have a [remote verification audit](./verification-report.md). Its verdict columns supersede the broad lead descriptions below for confirmation purposes. Published evidence is accepted within its stated scope; no physical ride is required when sources establish the essential facts.
 
@@ -14,7 +14,6 @@ The options worksheet is a research companion to the normalized data worksheets.
 | Avida Towers Makati Southpoint | Full 2025 community reply supports San Lorenzo Place jeep access; canonical route label and exact stop still need confirmation. |
 | Ayala Malls Circuit | Published One Ayala bus arrival at Gallery Drive; current service and last-mile entrance remain pending. |
 | St. John Bosco Parish | Older parish search excerpt supports a Libertad-Landmark corridor; does not resolve the current westbound alighting point. |
-| Manila Premiere Wines | Aguirre address corroborated by directories; no defensible boarding/alighting pair found. |
 | RCBC Plaza | Washington jeep lead plus LRT Buendia-bound bus alternative; floor conflict persists for the jeep. |
 | SM Makati | Bus to One Ayala plus published bridge access. |
 | The Landmark Makati | City Hall jeep lead retained; additional walking connection from One Ayala via Glorietta. |
@@ -38,10 +37,9 @@ The [mall access guide](https://thebeat.asia/manila/nomads/explore/ayala-center-
 
 The [July Salcedo report](https://www.spot.ph/newsfeatures/mobility/car-free-salcedo-a5229-20260728-bsc) concerns an August pilot. It does not establish October street restrictions. Distinguish Salcedo Village/Weekend Market from Salcedo Street when collecting route advice.
 
-For the [wine business](https://manila-premiere-wines.com/contact-us/), online identity alone does not establish a public storefront entrance or transport service. Existing address coordinates remain blank.
 
 ## Runtime boundary
 
-Later implementation now bundles the 15-place catalog and two published named vehicle legs with pending access, as described in [offline-data.md](../offline-data.md). The following paragraph records the boundary at the research stage; no complete option has been promoted to a ready recommendation.
+Later implementation now bundles the 14-place catalog and two published named vehicle legs with pending access, as described in [offline-data.md](../offline-data.md). The following paragraph records the boundary at the research stage; no complete option has been promoted to a ready recommendation.
 
 No new option was promoted to `bundledDataset`. Required loading coordinates and origin-access relationships remain incomplete. Verified seed promotion must retain direction-specific stops and explicitly agreed ML labels. No ML assets or labels, dependencies, or screens were added. Tests and builds remain paused; this pass used manual source and worksheet review only.

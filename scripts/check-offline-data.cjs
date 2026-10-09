@@ -85,10 +85,10 @@ async function main() {
       assert.equal(opens, 1);
       assert.equal(db.raw.prepare('PRAGMA user_version').get().user_version, 3);
       assert.equal(db.raw.prepare('PRAGMA foreign_keys').get().foreign_keys, 1);
-      assert.equal((await repo.listLandmarks()).length, 15);
-      assert.equal((await repo.listDestinations()).length, 15);
+      assert.equal((await repo.listLandmarks()).length, 14);
+      assert.equal((await repo.listDestinations()).length, 14);
       assert.equal(db.raw.prepare('SELECT count(*) AS n FROM transportation_routes').get().n, 6);
-      assert.equal((await repo.getDatasetMetadata()).version, 2);
+      assert.equal((await repo.getDatasetMetadata()).version, bundledDataset.version);
       assert.deepEqual(db.raw.prepare('PRAGMA foreign_key_check').all(), []);
     });
     await check('all six sourced combinations and strict-mode behavior', async () => {
@@ -118,7 +118,7 @@ async function main() {
     });
     await check('invalid dataset validation rejects before replacement', async () => {
       const invalid = structuredClone(bundledDataset);
-      invalid.version = 3;
+      invalid.version = bundledDataset.version + 1;
       invalid.landmarks[0].latitude = 14;
       assert.throws(() => validateDataset(invalid), /coordinates/);
       await assert.rejects(db.withTransactionAsync(() => seedDatabase(db, invalid)), /coordinates/);
@@ -131,16 +131,16 @@ async function main() {
       const order = structuredClone(bundledDataset);
       order.routeBoardingPoints.push(order.routeBoardingPoints[0]);
       assert.throws(() => validateDataset(order), /duplicate/);
-      assert.equal((await repo.getDatasetMetadata()).version, 2);
-      assert.equal((await repo.listLandmarks()).length, 15);
+      assert.equal((await repo.getDatasetMetadata()).version, bundledDataset.version);
+      assert.equal((await repo.listLandmarks()).length, 14);
     });
     await check('mid-seed SQL failure rolls back deleted rows and metadata', async () => {
       const changed = structuredClone(bundledDataset);
-      changed.version = 3;
+      changed.version = bundledDataset.version + 1;
       db.raw.exec("CREATE TRIGGER test_seed_failure BEFORE INSERT ON destinations BEGIN SELECT RAISE(ABORT, 'TEST ONLY forced failure'); END;");
       await assert.rejects(db.withTransactionAsync(() => seedDatabase(db, changed)), /forced failure/);
       db.raw.exec('DROP TRIGGER test_seed_failure');
-      assert.equal((await repo.getDatasetMetadata()).version, 2);
+      assert.equal((await repo.getDatasetMetadata()).version, bundledDataset.version);
       assert.equal((await repo.findLandmark('one-ayala')).name, 'TEST ONLY retained sentinel');
       assert.equal(db.raw.prepare('SELECT count(*) AS n FROM transportation_routes').get().n, 6);
     });
@@ -164,7 +164,7 @@ async function main() {
     });
     await check('higher dataset version removes obsolete reference routes; downgrade rejected', async () => {
       const changed = structuredClone(bundledDataset);
-      changed.version = 3;
+      changed.version = bundledDataset.version + 1;
       changed.routes = changed.routes.slice(0, 1);
       changed.routeBoardingPoints = changed.routeBoardingPoints.filter((link) => link.routeId === changed.routes[0].id);
       await db.withTransactionAsync(() => seedDatabase(db, changed));
@@ -183,7 +183,7 @@ async function main() {
           INSERT INTO transportation_routes VALUES ('test-route', 'TEST ONLY route', 'jeepney', 'test-destination');
           INSERT INTO route_boarding_points VALUES ('test-route', 'test-point', 0);
           INSERT INTO landmark_boarding_points VALUES ('test-origin', 'test-point');
-          INSERT INTO dataset_metadata VALUES (1, 2, 'TEST ONLY existing version');
+          INSERT INTO dataset_metadata VALUES (1, ${bundledDataset.version}, 'TEST ONLY existing version');
         `);
         if (version === 2) {
           legacy.raw.exec(schema.COMMUTER_INSTRUCTIONS_MIGRATION);
@@ -203,6 +203,30 @@ async function main() {
         assert.equal(migrated.alighting_instructions, version === 2 ? 'TEST ONLY preserved instructions' : null);
       });
     }
+    await check('dataset 2 upgrade removes retired wine place from both catalogs', async () => {
+      const installed = makeDb();
+      installed.raw.exec('PRAGMA foreign_keys = OFF;');
+      installed.raw.exec(schema.INITIAL_SCHEMA + schema.COMMUTER_INSTRUCTIONS_MIGRATION + schema.MANUAL_CATALOG_MIGRATION);
+      installed.raw.exec('PRAGMA foreign_keys = ON; PRAGMA user_version = 3;');
+      const oldDataset = structuredClone(bundledDataset);
+      oldDataset.version = 2;
+      const retiredPlace = { id: 'manila-premiere-wines', name: 'TEST ONLY retired place', latitude: null, longitude: null };
+      oldDataset.landmarks.push({ ...retiredPlace, classificationLabel: null });
+      oldDataset.destinations.push(retiredPlace);
+      await installed.withTransactionAsync(() => seedDatabase(installed, oldDataset));
+      const upgradedLoad = appRuntime(async () => installed);
+      const upgradedRepo = upgradedLoad('src/database/repositories/transport-repository.ts');
+      const upgradedService = upgradedLoad('src/features/transport/services/transport-service.ts');
+      assert.equal((await upgradedRepo.listLandmarks()).length, 14);
+      assert.equal((await upgradedRepo.listDestinations()).length, 14);
+      assert.equal(await upgradedRepo.findLandmark(retiredPlace.id), null);
+      assert.equal(await upgradedRepo.findDestination(retiredPlace.id), null);
+      assert.equal((await upgradedService.lookupTransportation(retiredPlace.id, 'one-ayala')).status, 'unsupported-origin');
+      assert.equal((await upgradedService.lookupTransportation('one-ayala', retiredPlace.id)).status, 'unsupported-destination');
+      assert.equal((await upgradedService.lookupTransportation('ayala-malls-circuit', 'one-ayala')).status, 'source-based');
+      assert.equal(installed.raw.prepare('SELECT count(*) AS n FROM transportation_routes').get().n, 6);
+      assert.deepEqual(installed.raw.prepare('PRAGMA foreign_key_check').all(), []);
+    });
     await check('failed initialization closes connection and retries; newer schema rejected', async () => {
       const future = makeDb();
       future.raw.exec('PRAGMA user_version = 99');

@@ -1,12 +1,12 @@
 # Makati transport research
 
-Research date: 2026-10-09. This is an online-source collection for the 15 user-supplied candidates, not a field-verified dataset. Later implementation now bundles their manual catalog and two published vehicle legs with incomplete guidance; see [offline-data.md](../offline-data.md). The broader researched journeys and coordinate candidates remain outside ready recommendations.
+Research date: 2026-10-09. This is an online-source collection for the 14 user-supplied candidates, not a field-verified dataset. Later implementation now bundles their manual catalog and two published vehicle legs with incomplete guidance; see [offline-data.md](../offline-data.md). The broader researched journeys and coordinate candidates remain outside ready recommendations.
 
 ## What was collected
 
-Follow-up coverage now includes [17 selected options for all 15 candidates](./transportation-options.csv). [coverage-review.md](./coverage-review.md) records newer community corroboration, primary-source retrieval limits, and pedestrian connections. [first-journey.md](./first-journey.md) now accounts for each remaining Circuit-to-One-Ayala detail, including explicit unknowns for operator, curb, coordinates, and walking paths.
+Follow-up coverage now includes [16 selected options for all 14 candidates](./transportation-options.csv). [coverage-review.md](./coverage-review.md) records newer community corroboration, primary-source retrieval limits, and pedestrian connections. [first-journey.md](./first-journey.md) now accounts for each remaining Circuit-to-One-Ayala detail, including explicit unknowns for operator, curb, coordinates, and walking paths.
 
-- `landmarks.csv` and `destinations.csv` retain all 15 names. Thirteen have provisional site coordinates; Southpoint and Manila Premiere Wines have address leads only. Model classification labels remain blank.
+- `landmarks.csv` and `destinations.csv` retain all 14 names. Thirteen have provisional site coordinates; Southpoint has an address lead only. Model classification labels remain blank.
 - `routes.csv` contains eleven directional or destination-specific research records, including one inferred parish journey and one historical electric-jeep record. IDs are application worksheet identifiers, not official route numbers.
 - `boarding-points.csv` contains eleven named pickup leads. Exact boarding coordinates are blank because the retrieved sources did not substantiate them. Building coordinates must not be reused as loading-bay coordinates.
 - Relationship worksheets record candidate route/pickup and landmark/access links. Stop order 0 represents the sole collected origin boarding point, not an operator-published stop sequence.
@@ -38,7 +38,6 @@ The [2026 One Ayala terminal guide](https://www.spot.ph/newsfeatures/mobility/ro
 
 The [2023 Makati Loop electric-jeep report](https://www.topgear.com.ph/news/motoring-news/makati-loop-e-jeepney-love-bus-a2619-20230619) is retained as historical evidence, including its Greenbelt stop lead. An electric jeepney stays under `jeepney`; it is not relabeled as an electric bus. Its listed stops do not establish the current direction-specific sequence.
 
-For Manila Premiere Wines, a [business listing](https://www.businesslist.ph/company/304326/manila-premiere-wines) provides an Aguirre Street address. The [business's own contact page](https://manila-premiere-wines.com/contact-us/) did not provide a usable coordinate or commuting route in the retrieved content. No route was invented for it.
 
 ## Coordinate provenance and rejected matches
 
@@ -68,7 +67,7 @@ The [Art Fair organizer's February 2026 guide](https://www.artfairphilippines.co
 
 Two conflicts need resolution before seed promotion: [May rider reports](https://www.reddit.com/r/makati/comments/1t6e4fs/p2p_buses_in_ayala_malls_circuitone_ayala/) question the P2P's reliability and terminal information; the [April terminal guide](https://www.spot.ph/newsfeatures/mobility/routes-at-one-ayala-2026-a5229-20260422-bsc) places Washington at UGF while the existing community lead says basement. Neither floor is confirmed. The `one-ayala-washington-basement` ID is retained for worksheet continuity, not as proof of a basement queue.
 
-The [museum's own visitor page](https://www.ayalamuseum.org/visit) confirms its Makati Avenue/De La Rosa address in Greenbelt Park. It does not establish a particular entrance, pedestrian path, or vehicle stop. The remaining Southpoint, parish, City Hall, Salcedo, Powerplant, and wine-shop journey gaps remain as described in their existing worksheet rows; no full journey has been newly certified.
+The [museum's own visitor page](https://www.ayalamuseum.org/visit) confirms its Makati Avenue/De La Rosa address in Greenbelt Park. It does not establish a particular entrance, pedestrian path, or vehicle stop. The remaining Southpoint, parish, City Hall, Salcedo, and Powerplant journey gaps remain as described in their existing worksheet rows; no full journey has been newly certified.
 
 Confirm travel direction, boarding/alighting locations, sufficiently precise coordinates, remaining access, and source dates using reliable published or observed evidence. For P2P reports, retain uncertainty about operator and service conditions where unresolved. Preserve findings in the worksheets, record desk audits in `verification_reviewed_on`, and use `verified_on` only for actual field observations. Promote only complete reviewed records into the bundled seed.
 
