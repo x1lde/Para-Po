@@ -51,3 +51,6 @@ tools/transit/cache/
 # Python bytecode
 __pycache__/
 *.pyc
+
+# web map worker copied from node_modules on postinstall
+/public/maplibre-gl-worker.mjs

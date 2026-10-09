@@ -1,56 +1,97 @@
-# Welcome to your Expo app 👋
+# ParaPo!
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+**Your commute, made simpler.** ParaPo! helps you get around Makati by starting from a place you already know.
+Point your camera at a landmark, or choose one, and see how to get to another: walk, jeepney, bus, P2P, or a ride with one transfer.
 
-## Get started
+The current release covers a pilot of 14 Makati landmarks, from Ayala Center to Salcedo Weekend Market.
 
-1. Install dependencies
+## Features
 
-   ```bash
-   npm install
-   ```
+- **Landmark recognition, on the device.** A bundled MobileNetV3 model (TensorFlow Lite) recognises the landmark in a photo. It runs offline, and it rejects blank, too-dark or too-bright photos before guessing. Recognition is optional; choosing a landmark by hand always works.
+- **Journey planner, offline.** Every pair of the 14 landmarks has ranked options with boarding and alighting points, walking distances, estimated times and route sources. The data is bundled, built from OpenStreetMap.
+- **Live map of Makati.** A MapLibre map shows the supported landmarks. On the Android app it also draws the chosen ride; the web preview uses MapLibre GL JS.
+- **Optional GPS.** "Use my location" picks the nearest supported landmark as your starting point. It's never required.
 
-2. Start the app
+## Getting started
 
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+Requirements: Node 22 and npm. The repository uses `package-lock.json`, so use npm (not bun) for installs.
 
 ```bash
-npm run reset-project
+npm install          # also copies the web map worker into public/
+npx expo start       # then press w for web, or open a development build
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+Recognition and the interactive map use native modules, so **Expo Go can't run them**. Build a development client instead:
 
-### Other setup steps
+```bash
+npx expo run:android            # local, needs Android Studio
+npx eas-cli@latest build --profile development   # cloud build
+```
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+The web build runs the planner, the landmark guide and the Makati overview map. Photo recognition isn't available on the web.
 
-## Learn more
+## Scripts
 
-To learn more about developing your project with Expo, look at the following resources:
+| Command | What it does |
+|---|---|
+| `npm run lint` | Expo lint (ESLint) |
+| `npx tsc --noEmit` | Typecheck |
+| `npm run check:journeys` | Journey data: all 182 pairs, leg chaining, planner API |
+| `npm run check:recognition` | Model metadata, decision rules, photo gate, delegate self-check |
+| `npm run check:camera` | Camera screen flow with mocked native APIs |
+| `npm run check:maps` / `check:location` / `check:offline-data` | Map scene, GPS handling, SQLite catalog |
+| `npm run report:offline-coverage` | Coverage report for the offline dataset |
+| `npx expo-doctor` | Dependency and config diagnostics |
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+The `check:*` scripts test logic with native modules mocked. They don't replace testing on a device.
 
-## Join the community
+## Project layout
 
-Join our community of developers creating universal apps.
+```
+src/app/                 Expo Router screens (file-based routes; _layout.tsx defines navigators)
+src/components/commute/  Shared UI: app shell, cards, buttons, the Makati map card
+src/features/
+  recognition/           Camera, TFLite model service, photo gate, score validation
+  transport/planner/     Generated journey data and the planJourney() API
+  maps/                  MapLibre surfaces (native and web), map scenes
+  location/              Optional GPS
+src/database/            Bundled dataset, SQLite schema and seeding
+assets/                  Model (assets/models), logo (assets/brand), icons, fonts
+ml/                      Landmark classifier: data fetchers, training, tests
+tools/transit/           Rebuilds the journey data from OpenStreetMap
+tools/brand/             Cuts the logo out of the brand board
+docs/                    Design, data and feature notes (start with architecture.md)
+```
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+## Rebuilding the data and model
+
+- **Journeys:** `python3 tools/transit/fetch_osm.py` then `python3 tools/transit/build_journeys.py`. See [docs/data/transit-routes.md](docs/data/transit-routes.md).
+- **Landmark model:** create a Python 3.12 environment in `ml/` and run `ml/.venv/bin/python ml/train.py`. Training only writes `ml/models/` when every release check passes. Copy the `.tflite` and `model_meta.json` into `assets/models/` (the second as `landmark_model.json`). See [ml/README.md](ml/README.md).
+- **Logo:** `ml/.venv/bin/python tools/brand/make_brand_assets.py` regenerates the logo assets from the brand board.
+
+Landmark training photos aren't in the repository. Most come from web and video sources with their own copyright, so `ml/` keeps the source lists needed to rebuild the set.
+
+## Data sources and attribution
+
+- Route and place data: © OpenStreetMap contributors, under the [Open Database License](https://www.openstreetmap.org/copyright).
+- Map tiles and style: [OpenFreeMap](https://openfreemap.org/), with OpenStreetMap data. The style URL can be changed with `EXPO_PUBLIC_MAP_STYLE_URL`.
+- The Circuit Makati ↔ One Ayala P2P is taken from a published news report (TopGear Philippines, 28 April 2026).
+- Each ride in the app links to the source it was built from.
+
+## Status and limits
+
+- Times are estimates. Schedules, fares and service changes aren't in the data; check the signboard before boarding.
+- Recognition accuracy is measured on held-out test photos, not on phones. On-device camera capture, GPU/Core ML speed and the native map haven't been tested on a physical device yet.
+- Only 14 landmarks are supported, all in Makati.
+
+## Documentation
+
+- [docs/architecture.md](docs/architecture.md): how the app is put together
+- [docs/recognition.md](docs/recognition.md): recognition pipeline and checks
+- [docs/data/transit-routes.md](docs/data/transit-routes.md): journey data, method and sources
+- [docs/maps.md](docs/maps.md) and [docs/visual-identity.md](docs/visual-identity.md)
+- [ml/README.md](ml/README.md): training, data and results
+
+## License
+
+[LICENSE](LICENSE) currently contains the MIT licence text from Expo's starter template, which names Expo as the copyright holder. Replace it with the project's own licence before publishing.

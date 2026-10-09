@@ -2,7 +2,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
-import { IllustratedMap } from '@/components/commute/illustrated-map';
+import { MakatiMap } from '@/components/commute/makati-map';
 import { Button, Card, Icon, Intro, Page, ui } from '@/components/commute/ui';
 import { pilotDataset } from '@/database/data/pilot-dataset';
 import { useResponsiveLayout } from '@/hooks/use-responsive-layout';
@@ -37,7 +37,7 @@ export function JourneyMap() {
         {originId && destinationId ? <JourneyOptions plan={planJourney(originId, destinationId)} />
           : <View style={ui.row}><Icon name="shield" size={18} /><ThemedText type="small" style={{ flex: 1 }} themeColor="textSecondary">Choose both places to see how to get there.</ThemedText></View>}
       </View>
-      <View style={styles.map}><IllustratedMap expanded={!desktop} /><ThemedText type="small" themeColor="textSecondary">Illustrated city preview. The mobile app shows each ride on an interactive map. Journey guidance works offline.</ThemedText></View>
+      <View style={styles.map}><MakatiMap expanded={!desktop} /><ThemedText type="small" themeColor="textSecondary">Map of the supported landmarks. The mobile app draws each ride on the map. Journey guidance works offline.</ThemedText></View>
     </View>
   </Page>;
 }

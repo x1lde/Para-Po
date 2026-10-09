@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
 import { Art, artwork, Button, Card, Icon, Intro, Page, ui } from '@/components/commute/ui';
-import { IllustratedMap } from '@/components/commute/illustrated-map';
+import { MakatiMap } from '@/components/commute/makati-map';
 import { pilotDataset } from '@/database/data/pilot-dataset';
 import { ChoicePicker } from '@/features/maps/components/ChoicePicker';
 import { useTheme } from '@/hooks/use-theme';
@@ -38,7 +38,7 @@ export default function HomeScreen() {
         </Card>
         <View style={[ui.row, { paddingHorizontal: 11 }]}><Icon name="sparkle" size={28} color={t.primary} /><View style={{ flex: 1 }}><ThemedText type="smallBold">Less guessing. More going.</ThemedText><ThemedText type="small" themeColor="textSecondary">Landmark recognition and local guidance work offline.</ThemedText></View></View>
       </View>
-      <View style={{ flex: wide ? 1 : undefined, width: wide ? undefined : '100%', minWidth: 0 }}><IllustratedMap expanded={!wide} /></View>
+      <View style={{ flex: wide ? 1 : undefined, width: wide ? undefined : '100%', minWidth: 0 }}><MakatiMap expanded={!wide} /></View>
     </View>
     <View style={[styles.bottom, wide && styles.wide]}>
       <Card style={{ flex: 1 }}><ThemedText style={styles.cardTitle}>Your city. Your everyday rides.</ThemedText><ThemedText type="small" themeColor="textSecondary">Jeepneys, buses, P2Ps and short walks between {pilotDataset.landmarks.length} familiar Makati landmarks.</ThemedText>

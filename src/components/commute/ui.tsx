@@ -1,10 +1,11 @@
 import { Image } from 'expo-image';
-import { Pressable, ScrollView, StyleSheet, View, type ViewProps } from 'react-native';
-import type { ReactNode } from 'react';
+import { ScrollView, StyleSheet, View, type ViewProps } from 'react-native';
+import { Children, type ReactNode } from 'react';
 import { ThemedText } from '@/components/themed-text';
 import { Brand } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useResponsiveLayout } from '@/hooks/use-responsive-layout';
+import { PressScale, Reveal } from './motion';
 
 const paths = {
   compass: '<circle cx="12" cy="12" r="9"/><path d="m16 8-3 5-5 3 3-5Z"/>',
@@ -39,8 +40,6 @@ export const artwork = {
   star: require('../../../assets/reference-ui/star.svg'), pin: require('../../../assets/reference-ui/pin.svg'),
   bus: require('../../../assets/reference-ui/bus.svg'), jeepney: require('../../../assets/reference-ui/jeepney.svg'),
   ejeep: require('../../../assets/reference-ui/ejeep.svg'), tricycle: require('../../../assets/reference-ui/tricycle.svg'),
-  map: require('../../../assets/reference-ui/city-map.svg'),
-  mapDark: require('../../../assets/reference-ui/city-map-dark.svg'),
 };
 const brand = {
   mark: require('../../../assets/brand/parapo-mark.png'),
@@ -71,11 +70,11 @@ export function Button({ children, onPress, disabled = false, icon, secondary = 
   const t = useTheme();
   const background = brand ? Brand.teal : secondary ? t.backgroundSelected : t.primary;
   const foreground = brand ? '#FFFFFF' : secondary ? t.primary : t.primaryText;
-  return <Pressable accessibilityRole="button" accessibilityState={{ disabled }} disabled={disabled} onPress={onPress}
-    style={({ pressed }) => [ui.button, { backgroundColor: background, opacity: disabled ? .45 : pressed ? .8 : 1 }]}>
+  return <PressScale accessibilityRole="button" accessibilityState={{ disabled }} disabled={disabled} onPress={onPress} hitSlop={4}
+    style={[ui.button, { backgroundColor: background }]}>
     <ThemedText style={{ flex: 1, color: foreground, fontWeight: '700' }}>{children}</ThemedText>
     {icon && <Icon name={icon} color={foreground} />}
-  </Pressable>;
+  </PressScale>;
 }
 export function Card({ style, ...props }: ViewProps) {
   const t = useTheme();
@@ -84,7 +83,7 @@ export function Card({ style, ...props }: ViewProps) {
 export function Page({ children }: { children: ReactNode }) {
   const { gutter } = useResponsiveLayout();
   return <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={[ui.page, { paddingHorizontal: gutter }]}>
-    <View style={ui.pageInner}>{children}<Footer /></View>
+    <View style={ui.pageInner}>{Children.toArray(children).map((child, i) => <Reveal key={i} delay={Math.min(i, 6) * 80}>{child}</Reveal>)}<Reveal delay={Math.min(Children.count(children), 6) * 80}><Footer /></Reveal></View>
   </ScrollView>;
 }
 export function Intro({ eyebrow, title, description }: { eyebrow: string; title: string; description: string }) {
