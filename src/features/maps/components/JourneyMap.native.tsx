@@ -1,12 +1,13 @@
+import { router } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
+import { BodyText, Button, Card, typography, useAppColors } from '@/components/commuter-ui';
 import type { BoardingOption, Destination, Landmark, TransportLookupResult } from '@/features/transport/types';
 import { getForegroundLocation } from '@/features/location/services/location-service';
 import { rankBoardingOptions } from '@/features/location/services/proximity';
 import type { LocationFix } from '@/features/location/types';
+import { Radius, Space } from '@/constants/theme';
 import { MAP_PLACE_REFERENCES, BUNDLED_ROUTE_GEOMETRIES } from '../data/map-references';
 import { buildMapScene, withUserLocation } from '../services/map-scene';
 import type { MapMarker, MapScene } from '../types';
@@ -15,10 +16,10 @@ import { TransportMap } from './TransportMap';
 import { loadMapJourney } from './journey-loader';
 import { useMapJourney } from './journey-context';
 import { chooseBoardingOption, findJourneyOption, selectJourneyDestination, selectJourneyOrigin } from './journey-selection';
-import { router } from 'expo-router';
 
 export function JourneyMap() {
   const { journey, setJourney } = useMapJourney();
+  const colors = useAppColors();
   const [origins, setOrigins] = useState<Landmark[]>([]);
   const [destinations, setDestinations] = useState<Destination[]>([]);
   const [originId, setOriginId] = useState('');
@@ -112,103 +113,131 @@ export function JourneyMap() {
     if (eligible) selectOption(eligible);
   };
   const activeMarker = scene.markers.find((marker) => marker.id === selectedMarker?.id);
-  return <ThemedView style={styles.page}>
-    <SafeAreaView edges={['top']} style={styles.header}><ThemedText type="subtitle">Plan your journey</ThemedText>
-      <ThemedText type="small">Offline guidance · Online map</ThemedText>
-      <View style={styles.row}><View style={styles.choice}><ChoicePicker label="Starting landmark" value={originId} choices={origins}
-        onSelect={(id) => setJourney((current) => selectJourneyOrigin(current, id))} /></View>
-      <View style={styles.choice}><ChoicePicker label="Destination" value={destinationId} choices={destinations} disabled={loading}
-        onSelect={(id) => setJourney((current) => selectJourneyDestination(current, id))} /></View></View>
+  const muted = { color: colors.textSecondary };
+  const legend: [string, string][] = [
+    [colors.success, 'Start'],
+    [colors.primary, 'Board'],
+    [colors.danger, 'Destination'],
+    [colors.gps, 'GPS'],
+  ];
+  return <View style={[styles.page, { backgroundColor: colors.background }]}>
+    <SafeAreaView edges={['top']} style={[styles.header, { backgroundColor: colors.background, borderBottomColor: colors.border }]}>
+      <View style={styles.eyebrowRow}>
+        <View style={[styles.eyebrowDot, { backgroundColor: colors.primary }]} />
+        <Text style={[typography.kicker, { color: colors.plum }]}>Offline guidance · Online map</Text>
+      </View>
+      <Text accessibilityRole="header" style={[typography.pageTitle, { color: colors.text }]}>Plan your journey</Text>
       <View style={styles.row}>
-        <Pressable accessibilityRole="button" disabled={locating} accessibilityState={{ disabled: locating }} style={styles.button} onPress={() => void locate()}>
-          <ThemedText type="link">{locating ? 'Finding GPS...' : hasRequestedLocation ? 'Refresh GPS' : 'Use GPS'}</ThemedText></Pressable>
-        {locating && <Pressable accessibilityRole="button" style={styles.button} onPress={() => {
+        <View style={styles.choice}><ChoicePicker label="Starting landmark" value={originId} choices={origins}
+          onSelect={(id) => setJourney((current) => selectJourneyOrigin(current, id))} /></View>
+        <View style={styles.choice}><ChoicePicker label="Destination" value={destinationId} choices={destinations} disabled={loading}
+          onSelect={(id) => setJourney((current) => selectJourneyDestination(current, id))} /></View>
+      </View>
+      <View style={styles.row}>
+        <Button label={locating ? 'Finding GPS...' : hasRequestedLocation ? 'Refresh GPS' : 'Use GPS'} variant="outline" icon="location" disabled={locating} onPress={() => void locate()} />
+        {locating && <Button label="Cancel GPS" variant="ghost" onPress={() => {
           locationSequence.current += 1; locationRequest.current?.abort(); setLocating(false);
           setLocationMessage('GPS cancelled. Continue with manual landmark selection.');
-        }}><ThemedText type="link">Cancel GPS</ThemedText></Pressable>}
-        <Pressable accessibilityRole="button" disabled={!result} accessibilityState={{ disabled: !result }} style={styles.button}
-          onPress={() => { setFocusMode('journey'); setFocusRequest((value) => value + 1); }}><ThemedText type="link">Show this journey</ThemedText></Pressable>
-      </View><ThemedText type="small">{locationMessage}</ThemedText>
-      <Pressable accessibilityRole="button" style={styles.button} onPress={() => router.navigate('/')}>
-        <ThemedText type="link">Back to Ride</ThemedText>
-      </Pressable>
+        }} />}
+        <Button label="Show this journey" variant="outline" icon="map" disabled={!result}
+          onPress={() => { setFocusMode('journey'); setFocusRequest((value) => value + 1); }} />
+      </View>
+      <Text accessibilityLiveRegion="polite" style={[typography.small, { color: colors.textSecondary }]}>{locationMessage}</Text>
+      <Button label="Back to Ride" variant="ghost" icon="arrowLeft" onPress={() => router.navigate('/')} />
     </SafeAreaView>
     <View style={styles.map}><TransportMap scene={scene} focusMode={focusMode} focusRequest={focusRequest} onMarkerPress={selectMarker}
       selectedMarkerId={activeMarker?.id ?? (selectedBoardingId ? `boarding:${selectedBoardingId}` : undefined)} selectedRouteId={selectedRouteId} /></View>
     <ScrollView style={styles.guidance} contentContainerStyle={styles.content}>
       <View style={styles.legend}>
-        {[['#32854b', 'Start'], ['#208AEF', 'Board'], ['#d33d46', 'Destination'], ['#7856c4', 'GPS']].map(([color, label]) =>
-          <View key={label} style={styles.legendItem}><View style={[styles.dot, { backgroundColor: color }]} /><ThemedText type="small">{label}</ThemedText></View>)}
+        {legend.map(([color, label]) =>
+          <View key={label} style={[styles.legendItem, { backgroundColor: colors.backgroundElement, borderColor: colors.border }]}>
+            <View style={[styles.dot, { backgroundColor: color }]} />
+            <Text style={[typography.small, { color: colors.text }]}>{label}</Text>
+          </View>)}
       </View>
-      {fix?.accuracyMeters !== null && fix?.accuracyMeters !== undefined && <ThemedText type="small">Purple area: reported GPS uncertainty, about {Math.round(fix.accuracyMeters)} m. It is not a walking radius.</ThemedText>}
-      {loading && <ActivityIndicator accessibilityLabel="Loading journey" />}
-      {error && <><ThemedText>Could not load local transportation data.</ThemedText><Pressable accessibilityRole="button" style={styles.button}
-        onPress={() => void loadJourney(originId, destinationId)}><ThemedText type="link">Retry data</ThemedText></Pressable></>}
-      {!loading && !error && destinations.length === 0 && <ThemedText>No destinations are available in the local catalog.</ThemedText>}
-      {!loading && !error && (!originId || !destinationId) && <ThemedText>Choose a starting landmark and destination here, or select a ride on Ride to open its map. No journey is selected yet.</ThemedText>}
-      {selectionUnavailable && <ThemedText accessibilityLiveRegion="polite">The previously selected ride is no longer available for this journey. Review the current options below.</ThemedText>}
-      {activeMarker && <ThemedView type="backgroundElement" style={styles.card}>
-        <ThemedText type="smallBold">{activeMarker.name}{activeMarker.approximate ? ' (approximate)' : ''}</ThemedText>
-        {activeMarker.details?.map((text) => <ThemedText type="small" key={text}>{text}</ThemedText>)}
-        {activeMarker.routeNames?.map((name) => <ThemedText type="small" key={name}>{name}</ThemedText>)}
-        {activeMarker.sourceReference && <ThemedText type="small" selectable>{activeMarker.sourceReference}</ThemedText>}
-        <Pressable accessibilityRole="button" onPress={() => setSelectedMarker(null)} style={styles.button}><ThemedText type="link">Close details</ThemedText></Pressable>
-      </ThemedView>}
+      {fix?.accuracyMeters !== null && fix?.accuracyMeters !== undefined && <Text style={[typography.small, { color: colors.textSecondary }]}>Purple area: reported GPS uncertainty, about {Math.round(fix.accuracyMeters)} m. It is not a walking radius.</Text>}
+      {loading && <ActivityIndicator accessibilityLabel="Loading journey" color={colors.primary} />}
+      {error && <Card>
+        <BodyText>Could not load local transportation data.</BodyText>
+        <View style={styles.actionRow}><Button label="Retry data" variant="outline" icon="refresh" onPress={() => void loadJourney(originId, destinationId)} /></View>
+      </Card>}
+      {!loading && !error && destinations.length === 0 && <Card><BodyText>No destinations are available in the local catalog.</BodyText></Card>}
+      {!loading && !error && (!originId || !destinationId) && <Card>
+        <BodyText>Choose a starting landmark and destination here, or select a ride on Ride to open its map. No journey is selected yet.</BodyText>
+        <Button label="Back to Ride" variant="outline" icon="arrowLeft" onPress={() => router.navigate('/')} />
+      </Card>}
+      {selectionUnavailable && <Text accessibilityLiveRegion="polite" style={[typography.small, { color: colors.gold }]}>The previously selected ride is no longer available for this journey. Review the current options below.</Text>}
+      {activeMarker && <Card>
+        <Text style={[typography.heading, { color: colors.text }]}>{activeMarker.name}{activeMarker.approximate ? ' (approximate)' : ''}</Text>
+        {activeMarker.details?.map((text) => <Text key={text} style={[typography.small, muted]}>{text}</Text>)}
+        {activeMarker.routeNames?.map((name) => <Text key={name} style={[typography.small, muted]}>{name}</Text>)}
+        {activeMarker.sourceReference && <Text style={[typography.small, muted]} selectable>{activeMarker.sourceReference}</Text>}
+        <Button label="Close details" variant="ghost" onPress={() => setSelectedMarker(null)} />
+      </Card>}
       {boardingPoints.length > 0 && <>
-        <ThemedText type="smallBold">Where to board</ThemedText>
-        <ThemedText type="small">Stops serving this destination. Tap a stop to highlight its guidance.</ThemedText>
+        <Text style={[typography.label, { color: colors.text }]}>Where to board</Text>
+        <Text style={[typography.small, muted]}>Stops serving this destination. Tap a stop to highlight its guidance.</Text>
         {boardingPoints.map((point) => {
           const marker = fullScene.markers.find((item) => item.id === `boarding:${point.id}`);
           const matching = ranked.filter((item) => item.option.boardingPoint.id === point.id);
           const distance = matching.find((item) => item.distanceMeters !== null)?.distanceMeters;
-          return <Pressable key={point.id} accessibilityRole="button" accessibilityState={{ selected: selectedBoardingId === point.id }}
-            style={[styles.stop, selectedBoardingId === point.id && styles.selected]} onPress={() => {
+          const selected = selectedBoardingId === point.id;
+          return <Pressable key={point.id} accessibilityRole="button" accessibilityState={{ selected }}
+            style={({ pressed }) => [styles.stop, { backgroundColor: colors.surfaceRaised, borderColor: selected ? colors.gold : colors.border }, pressed ? styles.pressed : null]} onPress={() => {
               const option = chooseBoardingOption(options, point.id, selectedRouteId);
               if (option) selectOption(option);
               setSelectedMarker(marker ?? null);
             }}>
-            <ThemedText type="smallBold">{point.name}</ThemedText>
-            <ThemedText type="small">{[...new Set(matching.map((item) => item.option.route.name))].join(' · ')}</ThemedText>
-            <ThemedText type="small">{distance === undefined || distance === null ? 'Distance unavailable' : `${Math.round(distance)} m straight-line from GPS`}</ThemedText>
-            {marker && !scene.markers.some((item) => item.id === marker.id) && <ThemedText type="small">Position recorded. Select this stop to show it on the map.</ThemedText>}
-            {!marker && <ThemedText type="small">Confirmed map position unavailable. Use the boarding instructions below.</ThemedText>}
+            <Text style={[typography.label, { color: colors.text }]}>{point.name}</Text>
+            <Text style={[typography.small, muted]}>{[...new Set(matching.map((item) => item.option.route.name))].join(' · ')}</Text>
+            <Text style={[typography.small, muted]}>{distance === undefined || distance === null ? 'Distance unavailable' : `${Math.round(distance)} m straight-line from GPS`}</Text>
+            {marker && !scene.markers.some((item) => item.id === marker.id) && <Text style={[typography.small, muted]}>Position recorded. Select this stop to show it on the map.</Text>}
+            {!marker && <Text style={[typography.small, muted]}>Confirmed map position unavailable. Use the boarding instructions below.</Text>}
           </Pressable>;
         })}
       </>}
-      {result?.status === 'source-based' && <ThemedText type="smallBold">Web-sourced recommendation</ThemedText>}
-      {result?.status === 'available' && <ThemedText type="smallBold">Transportation recommendation</ThemedText>}
-      {result?.status === 'already-at-destination' && <ThemedText>You selected the same starting place and destination.</ThemedText>}
-      {result?.status === 'no-routes' && <ThemedText>No bundled route covers this combination.</ThemedText>}
-      {result?.status === 'incomplete-guidance' && <ThemedText>Guidance is incomplete; these options need further review.</ThemedText>}
-      {(result?.status === 'unsupported-origin' || result?.status === 'unsupported-destination') && <ThemedText>Select a supported location.</ThemedText>}
-      {ranked.map(({ option, distanceMeters }, index) => <ThemedView type="backgroundElement" style={[styles.card, selectedBoardingId === option.boardingPoint.id && styles.selected]} key={`${option.route.id}:${option.boardingPoint.id}`}>
-        <Pressable accessibilityRole="button" accessibilityState={{ selected: selectedRouteId === option.route.id }} style={styles.button} onPress={() => {
+      {result?.status === 'source-based' && <Text style={[typography.label, { color: colors.text }]}>Web-sourced recommendation</Text>}
+      {result?.status === 'available' && <Text style={[typography.label, { color: colors.text }]}>Transportation recommendation</Text>}
+      {result?.status === 'already-at-destination' && <Text style={[typography.small, muted]}>You selected the same starting place and destination.</Text>}
+      {result?.status === 'no-routes' && <Text style={[typography.small, muted]}>No bundled route covers this combination.</Text>}
+      {result?.status === 'incomplete-guidance' && <Text style={[typography.small, muted]}>Guidance is incomplete; these options need further review.</Text>}
+      {(result?.status === 'unsupported-origin' || result?.status === 'unsupported-destination') && <Text style={[typography.small, muted]}>Select a supported location.</Text>}
+      {ranked.map(({ option, distanceMeters }, index) => <Card key={`${option.route.id}:${option.boardingPoint.id}`} style={selectedBoardingId === option.boardingPoint.id ? { borderColor: colors.gold, borderWidth: 2 } : undefined}>
+        <Button label={selectedRouteId === option.route.id ? 'Selected option' : 'Select this option'} variant="ghost" onPress={() => {
           selectOption(option);
           setSelectedMarker(fullScene.markers.find((marker) => marker.id === `boarding:${option.boardingPoint.id}`) ?? null);
-        }}><ThemedText type="link">{selectedRouteId === option.route.id ? 'Selected option' : 'Select this option'}</ThemedText></Pressable>
-        <ThemedText type="smallBold">{option.route.name}</ThemedText>
-        <ThemedText type="small">Vehicle: {option.route.transportationType}</ThemedText>
-        <ThemedText type="small">{option.originWalkingInstructions ?? 'Exact access to the boarding point is not recorded.'}</ThemedText>
-        <ThemedText type="small">Board: {option.boardingPoint.name}</ThemedText>
-        <ThemedText type="small">{option.boardingInstructions}</ThemedText>
-        <ThemedText type="small">Get off: {option.route.alightingLocation ?? 'Not recorded'}</ThemedText>
-        {option.route.alightingInstructions && <ThemedText type="small">{option.route.alightingInstructions}</ThemedText>}
-        <ThemedText type="small">{option.route.destinationWalkingInstructions ?? 'Exact remaining access is not recorded.'}</ThemedText>
-        <ThemedText type="small">{distanceMeters === null ? 'Boarding distance unavailable.' : `${index === 0 ? 'Nearest eligible point: ' : ''}${Math.round(distanceMeters)} m from GPS position, straight-line; not walking distance.`}</ThemedText>
-        <ThemedText type="small">{option.route.limitations}</ThemedText>
-        <ThemedText type="small" selectable>Reviewed {option.route.reviewedOn}: {option.route.sourceReference}</ThemedText>
-      </ThemedView>)}
-      {result && <ThemedText type="small">Landmark pins are site references, not boarding stops. {scene.omittedLocations.length > 0 ? 'Some locations have no confirmed map position. ' : ''}{scene.routes.length === 0 ? 'A sourced vehicle path is not available yet.' : 'Vehicle paths use the recorded source geometry.'}</ThemedText>}
+        }} />
+        <Text style={[typography.label, { color: colors.text }]}>{option.route.name}</Text>
+        <Text style={[typography.small, muted]}>Vehicle: {option.route.transportationType}</Text>
+        <Text style={[typography.small, muted]}>{option.originWalkingInstructions ?? 'Exact access to the boarding point is not recorded.'}</Text>
+        <Text style={[typography.small, muted]}>Board: {option.boardingPoint.name}</Text>
+        <Text style={[typography.small, muted]}>{option.boardingInstructions}</Text>
+        <Text style={[typography.small, muted]}>Get off: {option.route.alightingLocation ?? 'Not recorded'}</Text>
+        {option.route.alightingInstructions && <Text style={[typography.small, muted]}>{option.route.alightingInstructions}</Text>}
+        <Text style={[typography.small, muted]}>{option.route.destinationWalkingInstructions ?? 'Exact remaining access is not recorded.'}</Text>
+        <Text style={[typography.small, muted]}>{distanceMeters === null ? 'Boarding distance unavailable.' : `${index === 0 ? 'Nearest eligible point: ' : ''}${Math.round(distanceMeters)} m from GPS position, straight-line; not walking distance.`}</Text>
+        <Text style={[typography.small, muted]}>{option.route.limitations}</Text>
+        <Text style={[typography.small, muted]} selectable>Reviewed {option.route.reviewedOn}: {option.route.sourceReference}</Text>
+      </Card>)}
+      {result && <Text style={[typography.small, muted]}>Landmark pins are site references, not boarding stops. {scene.omittedLocations.length > 0 ? 'Some locations have no confirmed map position. ' : ''}{scene.routes.length === 0 ? 'A sourced vehicle path is not available yet.' : 'Vehicle paths use the recorded source geometry.'}</Text>}
     </ScrollView>
-  </ThemedView>;
+  </View>;
 }
 
 const styles = StyleSheet.create({
-  page: { flex: 1 }, header: { padding: 12, gap: 6 }, row: { flexDirection: 'row', flexWrap: 'wrap' },
-  choice: { flex: 1, minWidth: 130 }, button: { minHeight: 48, padding: 12, justifyContent: 'center' },
-  map: { flex: 1, minHeight: 180 }, guidance: { maxHeight: '40%' }, content: { padding: 16, gap: 12 },
-  card: { padding: 14, borderRadius: 12, gap: 6, borderWidth: 2, borderColor: 'transparent' },
-  stop: { minHeight: 48, padding: 14, gap: 6, borderRadius: 12, borderWidth: 2, borderColor: '#808080' },
-  selected: { borderColor: '#e58a00' }, legend: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
-  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 }, dot: { width: 10, height: 10, borderRadius: 5 },
+  page: { flex: 1 },
+  header: { width: '100%', maxWidth: 720, alignSelf: 'center', paddingHorizontal: Space.four, paddingVertical: Space.three, gap: Space.three, borderBottomWidth: 1 },
+  eyebrowRow: { flexDirection: 'row', alignItems: 'center', gap: Space.two },
+  eyebrowDot: { width: 8, height: 8, borderRadius: 4 },
+  row: { flexDirection: 'row', flexWrap: 'wrap', gap: Space.two },
+  choice: { flex: 1, minWidth: 130 },
+  map: { flex: 1, minHeight: 180 },
+  guidance: { maxHeight: '40%' },
+  content: { padding: Space.four, gap: Space.three },
+  actionRow: { flexDirection: 'row', flexWrap: 'wrap', gap: Space.two },
+  stop: { minHeight: 48, padding: Space.four, gap: Space.two, borderRadius: Radius.medium, borderWidth: 2 },
+  pressed: { opacity: 0.76 },
+  legend: { flexDirection: 'row', flexWrap: 'wrap', gap: Space.three },
+  legendItem: { flexDirection: 'row', alignItems: 'center', gap: Space.two, borderWidth: 1, borderRadius: Radius.pill, paddingHorizontal: Space.three, minHeight: 40 },
+  dot: { width: 10, height: 10, borderRadius: 5 },
 });

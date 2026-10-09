@@ -1,24 +1,23 @@
-import { ActivityIndicator, Pressable, StyleSheet } from 'react-native';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { BodyText, Button, typography, useAppColors } from '@/components/commuter-ui';
+import { Space } from '@/constants/theme';
 
 export function MapStatus({ message, loading = false, onRetry }: {
   message: string; loading?: boolean; onRetry?: () => void;
 }) {
+  const colors = useAppColors();
   return (
-    <ThemedView style={styles.container}>
-      {loading && <ActivityIndicator accessibilityLabel="Loading map" />}
-      <ThemedText style={styles.message}>{message}</ThemedText>
-      <ThemedText type="small">Your offline transportation guidance is still available.</ThemedText>
-      {onRetry && <Pressable accessibilityRole="button" onPress={onRetry} style={styles.button}>
-        <ThemedText type="link">Retry map</ThemedText>
-      </Pressable>}
-    </ThemedView>
+    <View style={styles.container}>
+      {loading && <ActivityIndicator accessibilityLabel="Loading map" color={colors.primary} />}
+      <BodyText style={styles.message}>{message}</BodyText>
+      <Text style={[typography.small, styles.note, { color: colors.textSecondary }]}>Your offline transportation guidance is still available.</Text>
+      {onRetry && <Button label="Retry map" variant="outline" icon="refresh" onPress={onRetry} />}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, padding: 24 },
+  container: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: Space.three, padding: Space.six },
   message: { textAlign: 'center' },
-  button: { minHeight: 48, minWidth: 120, alignItems: 'center', justifyContent: 'center' },
+  note: { textAlign: 'center' },
 });
