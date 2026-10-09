@@ -20,7 +20,7 @@ const LABEL_TO_PLACE_ID: Readonly<Record<string, string>> = {
 
 export function placeIdForLabel(label: string): string | null {
   if (label === NOT_A_LANDMARK_LABEL) return null;
-  const placeId = LABEL_TO_PLACE_ID[label];
+  const placeId = Object.prototype.hasOwnProperty.call(LABEL_TO_PLACE_ID, label) ? LABEL_TO_PLACE_ID[label] : undefined;
   if (!placeId) throw new RangeError(`Unknown landmark model label: ${label}`);
   return placeId;
 }

@@ -13,6 +13,10 @@ Audit-fix validation: TypeScript and lint pass; 10 mocked recognition checks, 13
 
 ## Use it
 
+Recognition recovery update (checks paused): the scanner now shows candidate model confidence for uncertain predictions and also offers supported candidates when the `other` class wins. Every candidate requires explicit user confirmation; no low-confidence prediction is automatically accepted as a starting point. The full manual catalog remains available. Framing guidance asks for a clear centred sign/building with surrounding facade. Unknown inherited object keys cannot resolve as model labels.
+
+The bundled classifier still accepts predictions only at its calibrated 0.85 threshold. Its stored validation metadata reports about 30% answered coverage across all validation images and about 46% on photo-only validation; frequent uncertainty is consistent with that precision-focused threshold and does not itself prove a broken database mapping. These historical metrics are not physical-device accuracy guarantees. Improving recognition beyond recovery requires reviewing failing photographs, preprocessing, and training coverage before retraining/recalibrating. No inference, tests, lint, typecheck, or builds were run for this update at the user's request.
+
 ```tsx
 import { useLandmarkRecognition } from '@/features/recognition/hooks/use-landmark-recognition';
 

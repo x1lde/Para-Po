@@ -78,6 +78,8 @@ async function main() {
   const repo = load('src/database/repositories/transport-repository.ts');
   const { lookupTransportation } = load('src/features/transport/services/transport-service.ts');
   const schema = load('src/database/schema.ts');
+  const { getDatasetCoverage } = load('src/database/dataset-coverage.ts');
+  const { getJourneyRecommendations } = load('src/features/transport/services/recommendation-service.ts');
   try {
     await check('fresh initialization, seed counts, foreign keys and shared connection', async () => {
       const connections = await Promise.all([client.getDatabase(), client.getDatabase(), client.getDatabase()]);
@@ -110,6 +112,38 @@ async function main() {
       assert.equal((await lookupTransportation('missing', 'one_ayala')).status, 'unsupported-origin');
       assert.equal((await lookupTransportation('one_ayala', 'missing')).status, 'unsupported-destination');
       assert.equal((await lookupTransportation("one_ayala' OR 1=1 --", 'one_ayala')).status, 'unsupported-origin');
+    });
+    await check('coverage identifies real supported journeys and missing data', async () => {
+      const coverage = getDatasetCoverage(bundledDataset);
+      assert.equal(coverage.counts.coveredPairs, 6);
+      assert.equal(coverage.counts.sourceBasedPairs, 6);
+      assert.equal(coverage.counts.readyPairs, 0);
+      assert.equal(coverage.originsWithoutRecommendations.length, 12);
+      assert.equal(coverage.boardingPointsWithoutCoordinates.length, 2);
+      assert.deepEqual(coverage.landmarksWithoutModelLabels, []);
+      for (const journey of coverage.journeys) {
+        assert.equal((await lookupTransportation(journey.originId, journey.destinationId)).status, journey.status);
+      }
+    });
+    await check('unified recommendation API preserves manual guidance without claiming unknown distances', async () => {
+      const request = { originId: 'ayala_malls_circuit', destinationId: 'one_ayala' };
+      const manual = await getJourneyRecommendations(request);
+      assert.equal(manual.result.status, 'source-based');
+      assert.equal(manual.locationStatus, 'not-provided');
+      assert.equal(manual.rankedOptions.length, 1);
+      assert.equal(manual.nearestOption, null);
+      const location = { coordinates: { latitude: 14.5, longitude: 121 }, accuracyMeters: 10, timestamp: Date.now() };
+      const gps = await getJourneyRecommendations({ ...request, location });
+      assert.equal(gps.locationStatus, 'usable');
+      assert.equal(gps.nearestOption, null, 'current boarding coordinates are unknown');
+      const stale = await getJourneyRecommendations({ ...request, location: { ...location, timestamp: 0 } });
+      assert.equal(stale.locationStatus, 'unusable');
+      const strict = await getJourneyRecommendations({ ...request, includeSourceBased: false, location });
+      assert.equal(strict.result.status, 'incomplete-guidance');
+      assert.deepEqual(strict.rankedOptions, []);
+      const uncovered = await getJourneyRecommendations({ originId: 'rcbc_plaza', destinationId: 'powerplant_mall', location });
+      assert.equal(uncovered.result.status, 'no-routes');
+      assert.equal(uncovered.nearestOption, null);
     });
     await check('same-version seed does not replace installed data', async () => {
       db.raw.exec("UPDATE landmarks SET name = 'TEST ONLY retained sentinel' WHERE id = 'one_ayala'");
@@ -161,6 +195,19 @@ async function main() {
       assert.deepEqual(result.options[0].guidanceIssues, ['boarding-coordinates-unavailable']);
       assert.equal((await lookupTransportation('ayala_malls_circuit', 'sm_makati')).status, 'source-based');
       assert.equal((await repo.listDestinationsForOrigin('ayala_malls_circuit', false)).length, 1);
+    });
+    await check('nearest recommendation uses confirmed eligible coordinates, including a valid zero distance', async () => {
+      // Synthetic test-only coordinates live in this isolated in-memory database.
+      db.raw.exec("UPDATE boarding_points SET name = 'TEST ONLY synthetic boarding point', latitude = 14.5, longitude = 121 WHERE id = 'circuit-cityflats-p2p-loading'");
+      const request = { originId: 'ayala_malls_circuit', destinationId: 'one_ayala',
+        location: { coordinates: { latitude: 14.5, longitude: 121 }, accuracyMeters: 10, timestamp: Date.now() } };
+      const recommendation = await getJourneyRecommendations(request);
+      assert.equal(recommendation.nearestOption.distanceMeters, 0);
+      assert.equal(recommendation.nearestOption.option.route.destinationId, 'one_ayala');
+      assert.equal(recommendation.distanceKind, 'straight-line');
+      db.raw.exec("UPDATE route_boarding_points SET boarding_verified = 0 WHERE route_id = 'circuit-p2p-to-one-ayala'");
+      assert.equal((await getJourneyRecommendations(request)).nearestOption, null);
+      assert.equal((await getJourneyRecommendations({ ...request, destinationId: 'powerplant_mall' })).result.status, 'no-routes');
     });
     await check('higher dataset version removes obsolete reference routes; downgrade rejected', async () => {
       const changed = structuredClone(bundledDataset);
