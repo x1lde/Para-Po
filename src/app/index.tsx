@@ -1,83 +1,264 @@
-import { useState } from 'react';
-import { Modal, Pressable, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
 
 import { AppIcon, BodyText, Card, Kicker, PrimaryButton, RouteField, ScreenFrame, VehiclePixelArt, typography, useAppColors } from '@/components/commuter-ui';
+import { commuterDataAvailable, commuterDataUnavailableMessage, listDestinationsForOrigin, listLandmarks, lookupTransportation } from '@/features/transport/components/commuter-data';
+import { filterOptionsByMode, excludeCurrentOrigin, type RideModeFilter } from '@/features/transport/components/commuter-selection';
+import type { BoardingOption, Destination, Landmark, TransportLookupResult, TransportationType } from '@/features/transport/types';
 import { Radius, Space } from '@/constants/theme';
 
 type PickerKind = 'origin' | 'destination';
+type ScreenState = 'planning' | 'options' | 'boarding';
+type CatalogState = 'loading' | 'ready' | 'error';
+type DestinationState = 'idle' | 'loading' | 'ready' | 'error';
+type LookupState = 'idle' | 'loading' | 'ready' | 'error';
+type Place = Landmark | Destination;
+
+const modeFilters: { id: RideModeFilter; label: string }[] = [
+  { id: 'all', label: 'All ride types' },
+  { id: 'jeepney', label: 'Jeepney' },
+  { id: 'e-jeep', label: 'E-jeep' },
+  { id: 'tricycle', label: 'Tricycle' },
+  { id: 'bus', label: 'Bus' },
+];
 
 export default function RideScreen() {
   const colors = useAppColors();
   const { width } = useWindowDimensions();
   const wide = width >= 900;
   const [picker, setPicker] = useState<PickerKind | null>(null);
+  const [placeQuery, setPlaceQuery] = useState('');
   const [scanOpen, setScanOpen] = useState(false);
   const [scanFocused, setScanFocused] = useState(false);
+  const [landmarks, setLandmarks] = useState<Landmark[]>([]);
+  const [catalogState, setCatalogState] = useState<CatalogState>(commuterDataAvailable ? 'loading' : 'error');
+  const [catalogAttempt, setCatalogAttempt] = useState(0);
+  const [origin, setOrigin] = useState<Landmark | null>(null);
+  const [destination, setDestination] = useState<Destination | null>(null);
+  const [destinations, setDestinations] = useState<Destination[]>([]);
+  const [destinationState, setDestinationState] = useState<DestinationState>('idle');
+  const [destinationAttempt, setDestinationAttempt] = useState(0);
+  const [screen, setScreen] = useState<ScreenState>('planning');
+  const [lookupState, setLookupState] = useState<LookupState>('idle');
+  const [lookupResult, setLookupResult] = useState<TransportLookupResult | null>(null);
+  const [selectedRide, setSelectedRide] = useState<BoardingOption | null>(null);
+  const [modeFilter, setModeFilter] = useState<RideModeFilter>('all');
+  const lookupRequest = useRef(0);
+
+  useEffect(() => {
+    if (!commuterDataAvailable) return;
+    let active = true;
+    listLandmarks().then((items) => {
+      if (!active) return;
+      setLandmarks(items);
+      setCatalogState('ready');
+    }).catch(() => {
+      if (active) setCatalogState('error');
+    });
+    return () => { active = false; };
+  }, [catalogAttempt]);
+
+  const originId = origin?.id;
+  useEffect(() => {
+    let active = true;
+    if (!originId || !commuterDataAvailable) return () => { active = false; };
+    listDestinationsForOrigin(originId, true).then((items) => {
+      if (!active) return;
+      setDestinations(excludeCurrentOrigin(items, originId));
+      setDestinationState('ready');
+    }).catch(() => {
+      if (active) setDestinationState('error');
+    });
+    return () => { active = false; };
+  }, [originId, destinationAttempt]);
+
+  const clearPreviousRoute = () => {
+    lookupRequest.current += 1;
+    setLookupState('idle');
+    setLookupResult(null);
+    setSelectedRide(null);
+    setModeFilter('all');
+    setScreen('planning');
+  };
+
+  const openPicker = (kind: PickerKind) => {
+    setPlaceQuery('');
+    setPicker(kind);
+  };
+
+  const choosePlace = (place: Place) => {
+    if (picker === 'origin') {
+      const nextOrigin = place as Landmark;
+      if (nextOrigin.id !== origin?.id) {
+        setDestinations([]);
+        setDestinationState('loading');
+        setOrigin(nextOrigin);
+        setDestination(null);
+        clearPreviousRoute();
+      }
+    } else if (picker === 'destination') {
+      const nextDestination = place as Destination;
+      if (nextDestination.id !== destination?.id) {
+        setDestination(nextDestination);
+        clearPreviousRoute();
+      }
+    }
+    setPicker(null);
+    setPlaceQuery('');
+  };
+
+  const findRide = async () => {
+    if (!origin || !destination || destination.id === origin.id) return;
+    const requestId = ++lookupRequest.current;
+    setLookupState('loading');
+    setLookupResult(null);
+    setSelectedRide(null);
+    setModeFilter('all');
+    setScreen('options');
+    try {
+      const result = await lookupTransportation(origin.id, destination.id, true);
+      if (requestId !== lookupRequest.current) return;
+      setLookupResult(result);
+      setLookupState('ready');
+    } catch {
+      if (requestId !== lookupRequest.current) return;
+      setLookupState('error');
+    }
+  };
+
+  const currentOptions = useMemo<BoardingOption[]>(() => {
+    return lookupResult?.status === 'available' || lookupResult?.status === 'source-based'
+      ? lookupResult.options
+      : [];
+  }, [lookupResult]);
+  const visibleOptions = useMemo(
+    () => filterOptionsByMode(currentOptions, modeFilter),
+    [currentOptions, modeFilter]
+  );
 
   return (
     <ScreenFrame>
-      <View style={[styles.mainLayout, wide ? styles.wideLayout : null]}>
-        <View style={styles.planner}>
-          <View style={styles.intro}>
-            <Kicker>Makati commute guide</Kicker>
-            <Text accessibilityRole="header" style={[typography.pageTitle, { color: colors.text }]}>Where are you headed?</Text>
-            <BodyText>Start with a landmark. We’ll help you find a ride when verified route information is available.</BodyText>
-          </View>
-
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Scan a landmark. Recognition is not connected yet."
-            onPress={() => setScanOpen(true)}
-            onFocus={() => setScanFocused(true)}
-            onBlur={() => setScanFocused(false)}
-            style={({ pressed }) => [styles.scanCard, { backgroundColor: colors.primary, borderColor: colors.primary }, scanFocused ? { borderWidth: 3, borderColor: colors.gold } : null, pressed && styles.pressed]}>
-            <View style={[styles.scanIcon, { backgroundColor: colors.primaryText }]}>
-              <AppIcon name="camera" size={23} color={colors.primary} />
+      <View style={[styles.mainLayout, wide && screen === 'planning' ? styles.wideLayout : null]}>
+        {screen === 'planning' ? (
+          <View style={styles.planner}>
+            <View style={styles.intro}>
+              <Kicker>Makati commute guide</Kicker>
+              <Text accessibilityRole="header" style={[typography.pageTitle, { color: colors.text }]}>Where are you headed?</Text>
+              <BodyText>Choose a starting landmark and a destination from the offline route catalog.</BodyText>
             </View>
-            <View style={styles.scanCopy}>
-              <Text style={[styles.scanTitle, { color: colors.primaryText }]}>Scan a landmark</Text>
-              <Text style={[styles.scanCaption, { color: colors.primaryText }]}>Find a nearby starting point</Text>
-            </View>
-            <AppIcon name="arrowRight" size={18} color={colors.primaryText} />
-          </Pressable>
 
-          <Card>
-            <View style={styles.cardHeading}>
-              <View style={[styles.stepBadge, { backgroundColor: colors.backgroundSelected }]}><AppIcon name="location" size={19} color={colors.primary} /></View>
-              <View style={styles.headingCopy}>
-                <Text style={[typography.sectionTitle, { color: colors.text }]}>Plan your ride</Text>
-                <BodyText>Choose two verified Makati landmarks.</BodyText>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Scan a landmark. Recognition is unavailable; manual landmark search is available."
+              onPress={() => setScanOpen(true)}
+              onFocus={() => setScanFocused(true)}
+              onBlur={() => setScanFocused(false)}
+              style={({ pressed }) => [styles.scanCard, { backgroundColor: colors.primary, borderColor: colors.primary }, scanFocused ? { borderWidth: 3, borderColor: colors.gold } : null, pressed && styles.pressed]}>
+              <View style={[styles.scanIcon, { backgroundColor: colors.primaryText }]}>
+                <AppIcon name="camera" size={23} color={colors.primary} />
+              </View>
+              <View style={styles.scanCopy}>
+                <Text style={[styles.scanTitle, { color: colors.primaryText }]}>Scan a landmark</Text>
+                <Text style={[styles.scanCaption, { color: colors.primaryText }]}>Recognition is unavailable; choose manually</Text>
+              </View>
+              <AppIcon name="arrowRight" size={18} color={colors.primaryText} />
+            </Pressable>
+
+            <Card>
+              <View style={styles.cardHeading}>
+                <View style={[styles.stepBadge, { backgroundColor: colors.backgroundSelected }]}><AppIcon name="location" size={19} color={colors.primary} /></View>
+                <View style={styles.headingCopy}>
+                  <Text style={[typography.sectionTitle, { color: colors.text }]}>Plan your ride</Text>
+                  <BodyText>Places come from the on-device SQLite catalog.</BodyText>
+                </View>
+              </View>
+              <View style={styles.fields}>
+                <RouteField label="Starting point" icon="location" value={origin?.name} onPress={() => openPicker('origin')} />
+                <RouteField label="Destination" icon="destination" value={destination?.name} onPress={() => openPicker('destination')} />
+              </View>
+              <PrimaryButton label="Find my ride" icon="arrowRight" onPress={findRide} disabled={!origin || !destination || destination.id === origin.id || lookupState === 'loading'} />
+              <View style={[styles.infoBox, { backgroundColor: colors.backgroundSelected }]}>
+                <AppIcon name="info" size={16} color={colors.plum} />
+                <BodyText style={styles.infoText}>
+                  {!commuterDataAvailable
+                    ? commuterDataUnavailableMessage
+                    : catalogState === 'loading'
+                    ? 'Loading the offline landmark catalog…'
+                    : catalogState === 'error'
+              ? commuterDataAvailable ? 'The local catalog could not be opened. Retry from the landmark picker.' : commuterDataUnavailableMessage
+                      : 'Recommendations use published-source pilot data. Live waits, trip times, and current operating status are not provided.'}
+                </BodyText>
+              </View>
+            </Card>
+
+            <View style={styles.rideTypes}>
+              <Text style={[styles.rideTypesTitle, { color: colors.text }]}>Ride types in the app</Text>
+              <View style={styles.typeRow}>
+                {(['Jeepney', 'E-jeep', 'Tricycle', 'Bus'] as const).map((type) => (
+                  <View key={type} style={[styles.typePill, { borderColor: colors.border, backgroundColor: colors.backgroundElement }]}>
+                    <VehiclePixelArt mode={type} />
+                    <Text style={[styles.typeText, { color: colors.textSecondary }]}>{type}</Text>
+                  </View>
+                ))}
               </View>
             </View>
-            <View style={styles.fields}>
-              <RouteField label="Starting point" icon="location" onPress={() => setPicker('origin')} />
-              <RouteField label="Destination" icon="destination" onPress={() => setPicker('destination')} />
-            </View>
-            <PrimaryButton label="Find my ride" icon="arrowRight" disabled />
-            <View style={[styles.infoBox, { backgroundColor: colors.backgroundSelected }]}>
-              <AppIcon name="info" size={16} color={colors.plum} />
-              <BodyText style={styles.infoText}>Verified landmark search and ride recommendations aren’t connected yet. Your trip can’t be planned until they’re available.</BodyText>
-            </View>
-          </Card>
-
-          <View style={styles.rideTypes}>
-            <Text style={[styles.rideTypesTitle, { color: colors.text }]}>Ride types we’re preparing for</Text>
-            <View style={styles.typeRow}>
-              {['Jeepney', 'E-jeep', 'Tricycle', 'Bus'].map((type) => (
-                <View key={type} style={[styles.typePill, { borderColor: colors.border, backgroundColor: colors.backgroundElement }]}>
-                  <VehiclePixelArt mode={type as 'Jeepney' | 'E-jeep' | 'Tricycle' | 'Bus'} />
-                  <Text style={[styles.typeText, { color: colors.textSecondary }]}>{type}</Text>
-                </View>
-              ))}
-            </View>
           </View>
-        </View>
+        ) : (
+          <View style={styles.planner}>
+            <JourneySummary origin={origin} destination={destination} onEdit={() => { clearPreviousRoute(); }} />
+            {screen === 'options' ? (
+              <>
+                <View style={styles.intro}>
+                  <Kicker>Offline route catalog</Kicker>
+                  <Text accessibilityRole="header" style={[typography.pageTitle, { color: colors.text }]}>Ride options</Text>
+                  <BodyText>Wait and total journey time are unavailable in this dataset. Routes stay in the service’s returned order.</BodyText>
+                </View>
+                <ModeFilters selected={modeFilter} onSelect={setModeFilter} />
+                <LookupContent
+                  state={lookupState}
+                  result={lookupResult}
+                  options={visibleOptions}
+                  filter={modeFilter}
+                  onSelect={(option) => {
+                    if (!currentOptions.some((item) => item.route.id === option.route.id && item.boardingPoint.id === option.boardingPoint.id)) return;
+                    setSelectedRide(option);
+                    setScreen('boarding');
+                  }}
+                  onRetry={findRide}
+                  onShowAll={() => setModeFilter('all')}
+                />
+                <ActionButton label="Back to trip planner" icon="arrowLeft" onPress={() => setScreen('planning')} />
+              </>
+            ) : selectedRide ? (
+              <BoardingDetails option={selectedRide} onBack={() => setScreen('options')} />
+            ) : (
+              <Card>
+                <Text style={[typography.sectionTitle, { color: colors.text }]}>This ride is no longer selected</Text>
+                <BodyText>Return to the current ride options and choose a route again.</BodyText>
+                <ActionButton label="Back to ride options" icon="arrowLeft" onPress={() => setScreen('options')} />
+              </Card>
+            )}
+          </View>
+        )}
 
-        {wide ? <MapPreview /> : null}
+        {wide && screen === 'planning' ? <MapPreview /> : null}
       </View>
 
-      <PlacePicker kind={picker} onClose={() => setPicker(null)} />
-      <ScanNotice visible={scanOpen} onClose={() => setScanOpen(false)} onChooseOrigin={() => { setScanOpen(false); setPicker('origin'); }} />
+      <PlacePicker
+        kind={picker}
+        query={placeQuery}
+        onQueryChange={setPlaceQuery}
+        landmarks={landmarks}
+        destinations={destinations}
+        catalogState={catalogState}
+        destinationState={destinationState}
+        origin={origin}
+        onChoose={choosePlace}
+        onClose={() => { setPicker(null); setPlaceQuery(''); }}
+        onRetryLandmarks={() => { setCatalogState('loading'); setCatalogAttempt((attempt) => attempt + 1); }}
+        onRetryDestinations={() => { setDestinationState('loading'); setDestinationAttempt((attempt) => attempt + 1); }}
+      />
+      <ScanNotice visible={scanOpen} onClose={() => setScanOpen(false)} onChooseOrigin={() => { setScanOpen(false); openPicker('origin'); }} />
     </ScreenFrame>
   );
 }
@@ -99,26 +280,255 @@ function MapPreview() {
             <AppIcon name="map" size={24} color={colors.textSecondary} />
           </View>
           <Text style={[styles.mapPlaceholderTitle, { color: colors.text }]}>Map data unavailable</Text>
-          <Text style={[styles.mapPlaceholderCopy, { color: colors.textSecondary }]}>No map renderer or offline map assets are connected to this app.</Text>
+          <Text style={[styles.mapPlaceholderCopy, { color: colors.textSecondary }]}>No map renderer, verified route geometry, or offline map assets are connected.</Text>
         </View>
-        <BodyText>Text directions will remain available when verified routes are connected.</BodyText>
+        <BodyText>Text directions are shown when the selected route includes them.</BodyText>
       </Card>
     </View>
   );
 }
 
-function PlacePicker({ kind, onClose }: { kind: PickerKind | null; onClose: () => void }) {
+function JourneySummary({ origin, destination, onEdit }: { origin: Landmark | null; destination: Destination | null; onEdit: () => void }) {
   const colors = useAppColors();
-  const label = kind === 'origin' ? 'Nasaan ka ngayon?' : 'Saan ang punta?';
+  return (
+    <Card>
+      <View style={styles.journeyHeader}>
+        <Text style={[typography.sectionTitle, { color: colors.text }]}>Your trip</Text>
+        <ActionButton label="Edit trip" onPress={onEdit} />
+      </View>
+      <View style={styles.journeyPlaces}>
+        <PlaceLine label="Starting point" name={origin?.name ?? 'Not selected'} />
+        <AppIcon name="arrowRight" size={17} color={colors.textSecondary} />
+        <PlaceLine label="Destination" name={destination?.name ?? 'Not selected'} />
+      </View>
+    </Card>
+  );
+}
+
+function PlaceLine({ label, name }: { label: string; name: string }) {
+  const colors = useAppColors();
+  return <View style={styles.placeLine}><Text style={[styles.placeLabel, { color: colors.textSecondary }]}>{label}</Text><Text style={[styles.placeName, { color: colors.text }]}>{name}</Text></View>;
+}
+
+function ModeFilters({ selected, onSelect }: { selected: RideModeFilter; onSelect: (mode: RideModeFilter) => void }) {
+  const colors = useAppColors();
+  return (
+    <View style={styles.filters} accessibilityLabel="Filter ride options by type">
+      {modeFilters.map((filter) => {
+        const active = selected === filter.id;
+        return (
+          <Pressable
+            key={filter.id}
+            accessibilityRole="button"
+            accessibilityState={{ selected: active }}
+            onPress={() => onSelect(filter.id)}
+            style={[styles.filterButton, { backgroundColor: active ? colors.primary : colors.backgroundElement, borderColor: active ? colors.primary : colors.border }]}>
+            <Text style={[styles.filterLabel, { color: active ? colors.primaryText : colors.text }]}>{filter.label}</Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
+function LookupContent({
+  state,
+  result,
+  options,
+  filter,
+  onSelect,
+  onRetry,
+  onShowAll,
+}: {
+  state: LookupState;
+  result: TransportLookupResult | null;
+  options: BoardingOption[];
+  filter: RideModeFilter;
+  onSelect: (option: BoardingOption) => void;
+  onRetry: () => void;
+  onShowAll: () => void;
+}) {
+  const colors = useAppColors();
+  if (state === 'loading') return <Card><ActivityIndicator accessibilityLabel="Loading ride options" color={colors.primary} /><BodyText>Checking the offline route catalog…</BodyText></Card>;
+  if (state === 'error') return <EmptyNotice title="Couldn’t load ride options" copy="The local route catalog returned an error. Your selected places are unchanged." actionLabel="Try again" onAction={onRetry} />;
+  if (!result) return <EmptyNotice title="No route results" copy="Choose a starting point and destination, then search again." />;
+
+  if (result.status === 'unsupported-origin') return <EmptyNotice title="Starting point unavailable" copy="That landmark is not in the current offline catalog. Choose another landmark." />;
+  if (result.status === 'unsupported-destination') return <EmptyNotice title="Destination unavailable" copy="That destination is not in the current offline catalog. Choose another supported destination." />;
+  if (result.status === 'already-at-destination') return <EmptyNotice title="You’re already at this place" copy="Choose a different destination to find a ride." />;
+  if (result.status === 'no-routes') return <EmptyNotice title="No supported route for this pair" copy="The offline catalog has no route for these places. Edit the trip to choose a different pair." />;
+  if (result.status === 'incomplete-guidance') return <EmptyNotice title="Route guidance is incomplete" copy="The catalog contains route records, but none meet its current source and instruction checks. No ride is being recommended." />;
+  if (options.length === 0) {
+    return (
+      <EmptyNotice
+        title={filter === 'all' ? 'No ride options available' : `No ${modeFilters.find((item) => item.id === filter)?.label.toLowerCase()} routes here`}
+        copy={filter === 'all' ? 'No eligible options were returned for this pair.' : 'This ride type has no matching route in the current catalog.'}
+        actionLabel={filter === 'all' ? undefined : 'Show all ride types'}
+        onAction={filter === 'all' ? undefined : onShowAll}
+      />
+    );
+  }
+
+  const sourceBased = result.status === 'source-based';
+  return (
+    <View style={styles.optionList}>
+      <View style={[styles.infoBox, { backgroundColor: colors.backgroundSelected }]}>
+        <AppIcon name="info" size={16} color={colors.plum} />
+        <BodyText style={styles.infoText}>
+          {sourceBased
+            ? 'Published-source pilot suggestions. They are not live, and boarding access has not been field-verified.'
+            : 'These options meet the local catalog’s guidance checks. No live wait or trip-time estimates are available.'}
+        </BodyText>
+      </View>
+      {options.map((option) => <RideOptionCard key={`${option.route.id}:${option.boardingPoint.id}`} option={option} sourceBased={sourceBased} onPress={() => onSelect(option)} />)}
+    </View>
+  );
+}
+
+function RideOptionCard({ option, sourceBased, onPress }: { option: BoardingOption; sourceBased: boolean; onPress: () => void }) {
+  const colors = useAppColors();
+  return (
+    <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => [styles.optionCard, { backgroundColor: colors.surfaceRaised, borderColor: colors.border }, pressed && styles.pressed]}>
+      <View style={styles.optionTop}>
+        <VehiclePixelArt mode={option.route.transportationType === 'jeepney' ? 'Jeepney' : 'Bus'} />
+        <View style={styles.optionCopy}>
+          <Text style={[styles.optionTitle, { color: colors.text }]}>{transportLabel(option.route.transportationType)}</Text>
+          <Text style={[styles.optionSubtitle, { color: colors.textSecondary }]}>{option.route.name}</Text>
+        </View>
+        <AppIcon name="chevronRight" size={18} color={colors.textSecondary} />
+      </View>
+      <Text style={[styles.optionBoarding, { color: colors.text }]}>Board at {option.boardingPoint.name}</Text>
+      <View style={styles.estimatesRow}>
+        <Text style={[styles.estimateText, { color: colors.textSecondary }]}>Wait: unavailable</Text>
+        <Text style={[styles.estimateText, { color: colors.textSecondary }]}>Total time: unavailable</Text>
+      </View>
+      <Text style={[styles.evidenceText, { color: sourceBased ? colors.gold : colors.success }]}>
+        {sourceBased ? 'Published-source suggestion • boarding not field-verified' : 'Meets local guidance checks'}
+      </Text>
+    </Pressable>
+  );
+}
+
+function BoardingDetails({ option, onBack }: { option: BoardingOption; onBack: () => void }) {
+  const colors = useAppColors();
+  return (
+    <View style={styles.detailContent}>
+      <View style={styles.intro}>
+        <Kicker>Boarding details</Kicker>
+        <Text accessibilityRole="header" style={[typography.pageTitle, { color: colors.text }]}>How to ride</Text>
+        <View style={styles.detailTitleRow}>
+          <VehiclePixelArt mode={option.route.transportationType === 'jeepney' ? 'Jeepney' : 'Bus'} />
+          <View style={styles.optionCopy}>
+            <Text style={[styles.optionTitle, { color: colors.text }]}>{transportLabel(option.route.transportationType)}</Text>
+            <Text style={[styles.optionSubtitle, { color: colors.textSecondary }]}>{option.route.name}</Text>
+          </View>
+        </View>
+      </View>
+
+      <Card>
+        <Text style={[styles.detailSectionTitle, { color: colors.text }]}>Before you board</Text>
+        <Instruction label="Boarding location" value={`${option.boardingPoint.name}${option.boardingVerified ? ' • verified' : ' • not field-verified'}`} />
+        <Instruction label="Walk from starting point" value={option.originWalkingInstructions ?? 'Walking directions and estimate are unavailable.'} />
+        <Instruction label="Signboard / boarding instruction" value={option.boardingInstructions ?? 'No signboard instruction is available.'} />
+        {!option.accessVerified || !option.boardingVerified ? <BodyText>Confirm the boarding point locally before relying on it; its access or stop location is not field-verified.</BodyText> : null}
+      </Card>
+
+      <Card>
+        <Text style={[styles.detailSectionTitle, { color: colors.text }]}>At your destination</Text>
+        <Instruction label="Alight at" value={option.route.alightingLocation ?? 'Alighting point unavailable.'} />
+        <Instruction label="Alighting instruction" value={option.route.alightingInstructions ?? 'No alighting instruction is available.'} />
+        <Instruction label="Continue on foot" value={option.route.destinationWalkingInstructions ?? 'Destination walking directions are unavailable.'} />
+      </Card>
+
+      <Card>
+        <Text style={[styles.detailSectionTitle, { color: colors.text }]}>Estimate and source limits</Text>
+        <Instruction label="Wait / journey time" value="Not supplied by the offline catalog." />
+        <Instruction label="Reviewed" value={option.route.reviewedOn ?? 'Review date unavailable.'} />
+        <Instruction label="Source" value={option.route.sourceReference ?? 'No source recorded.'} />
+        <Instruction label="Limitations" value={option.route.limitations ?? 'No limitations recorded.'} />
+      </Card>
+
+      <View style={styles.actions}>
+        <ActionButton label="Back to ride options" icon="arrowLeft" onPress={onBack} />
+        <View style={[styles.infoBox, { backgroundColor: colors.backgroundSelected }]}>
+          <AppIcon name="map" size={16} color={colors.textSecondary} />
+          <BodyText style={styles.infoText}>Route map, GPS-based nearest stop, and trip completion saving are unavailable.</BodyText>
+        </View>
+      </View>
+    </View>
+  );
+}
+
+function Instruction({ label, value }: { label: string; value: string }) {
+  const colors = useAppColors();
+  return <View style={styles.instruction}><Text style={[styles.instructionLabel, { color: colors.textSecondary }]}>{label}</Text><Text style={[styles.instructionValue, { color: colors.text }]}>{value}</Text></View>;
+}
+
+function EmptyNotice({ title, copy, actionLabel, onAction }: { title: string; copy: string; actionLabel?: string; onAction?: () => void }) {
+  const colors = useAppColors();
+  return (
+    <Card>
+      <Text style={[styles.emptyTitle, { color: colors.text }]}>{title}</Text>
+      <BodyText>{copy}</BodyText>
+      {actionLabel && onAction ? <ActionButton label={actionLabel} onPress={onAction} /> : null}
+    </Card>
+  );
+}
+
+function ActionButton({ label, onPress, icon }: { label: string; onPress: () => void; icon?: 'arrowLeft' | 'arrowRight' }) {
+  const colors = useAppColors();
+  return (
+    <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => [styles.actionButton, { borderColor: colors.border }, pressed && styles.pressed]}>
+      {icon ? <AppIcon name={icon} size={16} color={colors.primary} /> : null}
+      <Text style={[styles.actionLabel, { color: colors.primary }]}>{label}</Text>
+    </Pressable>
+  );
+}
+
+function PlacePicker({
+  kind,
+  query,
+  onQueryChange,
+  landmarks,
+  destinations,
+  catalogState,
+  destinationState,
+  origin,
+  onChoose,
+  onClose,
+  onRetryLandmarks,
+  onRetryDestinations,
+}: {
+  kind: PickerKind | null;
+  query: string;
+  onQueryChange: (value: string) => void;
+  landmarks: Landmark[];
+  destinations: Destination[];
+  catalogState: CatalogState;
+  destinationState: DestinationState;
+  origin: Landmark | null;
+  onChoose: (place: Place) => void;
+  onClose: () => void;
+  onRetryLandmarks: () => void;
+  onRetryDestinations: () => void;
+}) {
+  const colors = useAppColors();
+  const isOrigin = kind === 'origin';
+  const title = isOrigin ? 'Nasaan ka ngayon?' : 'Saan ang punta?';
+  const state = isOrigin ? catalogState : destinationState;
+  const places: Place[] = isOrigin ? landmarks : destinations;
+  const filtered = places.filter((place) => place.name.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()));
+  const needsOrigin = !isOrigin && !origin;
+
   return (
     <Modal visible={kind !== null} transparent animationType="none" onRequestClose={onClose}>
       <View style={[styles.modalBackdrop, { backgroundColor: colors.scrim }]}>
-        <View accessibilityViewIsModal accessibilityLabel="Landmark picker" style={[styles.sheet, { backgroundColor: colors.background }]}>
+        <View accessibilityViewIsModal accessibilityLabel={isOrigin ? 'Starting point picker' : 'Destination picker'} style={[styles.sheet, { backgroundColor: colors.background }]}>
           <View style={[styles.sheetHandle, { backgroundColor: colors.controlMuted }]} />
           <View style={styles.sheetHeading}>
             <View style={styles.headingCopy}>
-              <Kicker>{kind === 'origin' ? 'Starting point' : 'Destination'}</Kicker>
-              <Text accessibilityRole="header" style={[typography.sectionTitle, { color: colors.text }]}>{label}</Text>
+              <Kicker>{isOrigin ? 'Starting point' : 'Destination'}</Kicker>
+              <Text accessibilityRole="header" style={[typography.sectionTitle, { color: colors.text }]}>{title}</Text>
             </View>
             <Pressable accessibilityRole="button" accessibilityLabel="Close landmark search" onPress={onClose} style={[styles.closeButton, { backgroundColor: colors.backgroundSelected }]}>
               <AppIcon name="close" size={17} color={colors.text} />
@@ -126,20 +536,49 @@ function PlacePicker({ kind, onClose }: { kind: PickerKind | null; onClose: () =
           </View>
           <View style={[styles.searchBox, { borderColor: colors.border, backgroundColor: colors.surfaceRaised }]}>
             <AppIcon name="search" size={18} color={colors.textSecondary} />
-            <TextInput accessibilityLabel="Search Makati landmarks" placeholder="Search Makati landmarks" placeholderTextColor={colors.textSecondary} editable={false} style={[styles.searchInput, { color: colors.text }]} />
+            <TextInput accessibilityLabel={`Search ${isOrigin ? 'starting points' : 'destinations'}`} placeholder="Search Makati places" placeholderTextColor={colors.textSecondary} value={query} onChangeText={onQueryChange} style={[styles.searchInput, { color: colors.text }]} />
           </View>
-          <View style={[styles.emptyState, { backgroundColor: colors.backgroundElement }]}>
-            <AppIcon name="locationOff" size={23} color={colors.plum} />
-            <Text style={[styles.emptyTitle, { color: colors.text }]}>Landmark directory unavailable</Text>
-            <BodyText style={styles.emptyCopy}>A verified landmark list and search service haven’t been added yet. We can’t confirm a starting point or destination.</BodyText>
-          </View>
+          <ScrollView style={styles.placeList} keyboardShouldPersistTaps="handled">
+            {needsOrigin ? <PickerEmpty title="Choose a starting point first" copy="Destinations are limited to places with route records from your selected landmark." /> : null}
+            {!needsOrigin && state === 'loading' ? <PickerLoading /> : null}
+            {!needsOrigin && state === 'error' ? (
+              <PickerEmpty title={commuterDataAvailable ? 'Couldn’t read the offline place catalog' : 'Offline places unavailable here'} copy={commuterDataAvailable ? 'Your current selection is unchanged. Retry loading the local SQLite data.' : commuterDataUnavailableMessage}>
+                {commuterDataAvailable ? <ActionButton label="Try again" onPress={isOrigin ? onRetryLandmarks : onRetryDestinations} /> : null}
+              </PickerEmpty>
+            ) : null}
+            {!needsOrigin && state === 'ready' && filtered.length === 0 ? (
+              <PickerEmpty
+                title={query.trim() ? 'No matching places' : isOrigin ? 'No landmarks available' : 'No supported destinations'}
+                copy={query.trim() ? 'Try another name or clear your search.' : isOrigin ? 'The offline catalog has no landmarks to choose.' : 'No route-supported destination is listed for this starting point.'}
+              />
+            ) : null}
+            {!needsOrigin && state === 'ready' ? filtered.map((place) => (
+              <Pressable key={place.id} accessibilityRole="button" onPress={() => onChoose(place)} style={({ pressed }) => [styles.placeChoice, { borderColor: colors.border }, pressed && styles.pressed]}>
+                <View style={[styles.placeChoiceIcon, { backgroundColor: colors.backgroundSelected }]}>
+                  <AppIcon name={isOrigin ? 'location' : 'destination'} size={18} color={colors.primary} />
+                </View>
+                <Text style={[styles.placeChoiceName, { color: colors.text }]}>{place.name}</Text>
+                <AppIcon name="chevronRight" size={16} color={colors.textSecondary} />
+              </Pressable>
+            )) : null}
+          </ScrollView>
           <Pressable accessibilityRole="button" onPress={onClose} style={[styles.secondaryButton, { borderColor: colors.border }]}>
-            <Text style={[styles.secondaryButtonText, { color: colors.text }]}>Close</Text>
+            <Text style={[styles.secondaryButtonText, { color: colors.text }]}>Cancel</Text>
           </Pressable>
         </View>
       </View>
     </Modal>
   );
+}
+
+function PickerLoading() {
+  const colors = useAppColors();
+  return <View style={styles.pickerStatus}><ActivityIndicator accessibilityLabel="Loading places" color={colors.primary} /><BodyText>Loading places from this device…</BodyText></View>;
+}
+
+function PickerEmpty({ title, copy, children }: { title: string; copy: string; children?: React.ReactNode }) {
+  const colors = useAppColors();
+  return <View style={[styles.emptyState, { backgroundColor: colors.backgroundElement }]}><Text style={[styles.emptyTitle, { color: colors.text }]}>{title}</Text><BodyText style={styles.emptyCopy}>{copy}</BodyText>{children}</View>;
 }
 
 function ScanNotice({ visible, onClose, onChooseOrigin }: { visible: boolean; onClose: () => void; onChooseOrigin: () => void }) {
@@ -152,7 +591,7 @@ function ScanNotice({ visible, onClose, onChooseOrigin }: { visible: boolean; on
             <AppIcon name="viewfinder" size={25} color={colors.plum} />
           </View>
           <Text accessibilityRole="header" style={[typography.sectionTitle, { color: colors.text }]}>Landmark scanning isn’t ready</Text>
-          <BodyText>The recognition model and verified landmark directory aren’t connected. No camera permission was requested and no scan was started.</BodyText>
+          <BodyText>The model and camera prediction service are not connected. No camera permission was requested and no scan was started.</BodyText>
           <PrimaryButton label="Choose starting point" onPress={onChooseOrigin} icon="location" />
           <Pressable accessibilityRole="button" onPress={onClose} style={styles.cancelButton}>
             <Text style={[styles.cancelText, { color: colors.textSecondary }]}>Cancel</Text>
@@ -161,6 +600,12 @@ function ScanNotice({ visible, onClose, onChooseOrigin }: { visible: boolean; on
       </View>
     </Modal>
   );
+}
+
+function transportLabel(type: TransportationType): string {
+  if (type === 'e-bus') return 'E-bus';
+  if (type === 'jeepney') return 'Jeepney';
+  return 'Bus';
 }
 
 const styles = StyleSheet.create({
@@ -172,7 +617,7 @@ const styles = StyleSheet.create({
   scanIcon: { width: 48, height: 48, borderRadius: Radius.medium, alignItems: 'center', justifyContent: 'center' },
   scanCopy: { flex: 1, gap: Space.one },
   scanTitle: { fontSize: 18, lineHeight: 23, fontWeight: '800' },
-  scanCaption: { fontSize: 13, lineHeight: 18, opacity: 0.88 },
+  scanCaption: { fontSize: 13, lineHeight: 18, opacity: 0.92, flexShrink: 1 },
   cardHeading: { flexDirection: 'row', alignItems: 'center', gap: Space.three },
   stepBadge: { width: 42, height: 42, borderRadius: Radius.medium, alignItems: 'center', justifyContent: 'center' },
   headingCopy: { flex: 1, gap: Space.one },
@@ -196,7 +641,12 @@ const styles = StyleSheet.create({
   sheetHeading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: Space.three },
   closeButton: { width: 48, height: 48, borderRadius: Radius.pill, alignItems: 'center', justifyContent: 'center' },
   searchBox: { minHeight: 52, borderWidth: 1, borderRadius: Radius.medium, paddingHorizontal: Space.three, flexDirection: 'row', alignItems: 'center', gap: Space.two },
-  searchInput: { flex: 1, minHeight: 48, fontSize: 15 },
+  searchInput: { flex: 1, minHeight: 48, fontSize: 16 },
+  placeList: { flexShrink: 1 },
+  placeChoice: { minHeight: 56, borderBottomWidth: 1, flexDirection: 'row', alignItems: 'center', gap: Space.three, paddingVertical: Space.two },
+  placeChoiceIcon: { width: 38, height: 38, borderRadius: Radius.small, alignItems: 'center', justifyContent: 'center' },
+  placeChoiceName: { flex: 1, fontSize: 16, lineHeight: 22, fontWeight: '600' },
+  pickerStatus: { minHeight: 100, justifyContent: 'center', alignItems: 'center', gap: Space.two },
   emptyState: { borderRadius: Radius.medium, padding: Space.four, alignItems: 'center', gap: Space.two },
   emptyTitle: { fontSize: 16, lineHeight: 22, fontWeight: '700', textAlign: 'center' },
   emptyCopy: { textAlign: 'center', maxWidth: 380 },
@@ -206,5 +656,32 @@ const styles = StyleSheet.create({
   dialogIcon: { width: 54, height: 54, borderRadius: Radius.medium, alignItems: 'center', justifyContent: 'center' },
   cancelButton: { minHeight: 48, alignItems: 'center', justifyContent: 'center' },
   cancelText: { fontSize: 15, lineHeight: 20, fontWeight: '700' },
-  pressed: { opacity: 0.78 },
+  journeyHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: Space.two },
+  journeyPlaces: { flexDirection: 'row', alignItems: 'center', gap: Space.two, flexWrap: 'wrap' },
+  placeLine: { flex: 1, minWidth: 120, gap: Space.one },
+  placeLabel: { fontSize: 12, lineHeight: 16, fontWeight: '600' },
+  placeName: { fontSize: 15, lineHeight: 21, fontWeight: '700' },
+  filters: { flexDirection: 'row', flexWrap: 'wrap', gap: Space.two },
+  filterButton: { minHeight: 48, borderWidth: 1, borderRadius: Radius.pill, paddingHorizontal: Space.three, justifyContent: 'center' },
+  filterLabel: { fontSize: 14, lineHeight: 19, fontWeight: '700' },
+  optionList: { gap: Space.three },
+  optionCard: { borderWidth: 1, borderRadius: Radius.card, padding: Space.four, gap: Space.two },
+  optionTop: { flexDirection: 'row', alignItems: 'center', gap: Space.three },
+  optionCopy: { flex: 1, minWidth: 0, gap: Space.one },
+  optionTitle: { fontSize: 17, lineHeight: 23, fontWeight: '800' },
+  optionSubtitle: { fontSize: 14, lineHeight: 20 },
+  optionBoarding: { fontSize: 15, lineHeight: 21, fontWeight: '700' },
+  estimatesRow: { flexDirection: 'row', gap: Space.three, flexWrap: 'wrap' },
+  estimateText: { fontSize: 14, lineHeight: 19, fontWeight: '600' },
+  evidenceText: { fontSize: 13, lineHeight: 19, fontWeight: '700' },
+  actionButton: { minHeight: 48, borderWidth: 1, borderRadius: Radius.medium, paddingHorizontal: Space.three, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Space.two, alignSelf: 'flex-start' },
+  actionLabel: { fontSize: 14, lineHeight: 20, fontWeight: '700', textAlign: 'center' },
+  pressed: { opacity: 0.76 },
+  detailContent: { gap: Space.four },
+  detailTitleRow: { flexDirection: 'row', alignItems: 'center', gap: Space.three },
+  detailSectionTitle: { fontSize: 17, lineHeight: 23, fontWeight: '800' },
+  instruction: { gap: Space.one },
+  instructionLabel: { fontSize: 12, lineHeight: 17, fontWeight: '700' },
+  instructionValue: { fontSize: 16, lineHeight: 24 },
+  actions: { gap: Space.two },
 });
