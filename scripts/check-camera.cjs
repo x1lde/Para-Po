@@ -16,7 +16,7 @@ function fixture({ result, state = { status: 'ready' }, platform = 'android', pe
   let focusCleanup;
   let appStateChange;
   let tree;
-  const log = { photos: 0, uris: [], navigation: [] };
+  const log = { photos: 0, uris: [], navigation: [], reloads: 0 };
   const effects = [];
   const mocks = {
     'react/jsx-runtime': jsx,
@@ -56,7 +56,7 @@ function fixture({ result, state = { status: 'ready' }, platform = 'android', pe
     '@/features/maps/components/ChoicePicker': { ChoicePicker: 'ChoicePicker' },
     '@/features/transport/components/JourneyOptions': { JourneyOptions: 'JourneyOptions' },
     '@/features/transport/planner/journey-planner': { planJourney: (origin, destination) => ({ status: 'planned', origin, destination }) },
-    '../hooks/use-landmark-recognition': { useLandmarkRecognition: () => ({ state, recognize: async (uri) => { log.uris.push(uri); if (recognizeError) throw recognizeError; return result; } }) },
+    '../hooks/use-landmark-recognition': { useLandmarkRecognition: () => ({ state, reload: async () => { log.reloads++; }, recognize: async (uri) => { log.uris.push(uri); if (recognizeError) throw recognizeError; return result; } }) },
   };
   const compiled = ts.transpileModule(fs.readFileSync('src/features/recognition/components/LandmarkCamera.tsx', 'utf8'), {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX },
@@ -160,13 +160,20 @@ async function main() {
   assert(failingCamera.text().includes('Could not take the photo'));
   console.log('PASS recognition errors are not reported as photo-capture failures');
 
-  for (const options of [{ platform: 'web' }, { state: { status: 'unavailable' } }, { permission: { granted: false, canAskAgain: false } }]) {
+  const unavailable = fixture({ state: { status: 'unavailable', reason: 'model-load-failed' } });
+  assert(unavailable.nodes().some((node) => node.type === 'CameraView'), 'model failure must not hide the camera');
+  assert(unavailable.button('Take landmark photo').props.disabled, 'do not capture until the model is ready');
+  unavailable.button('Retry recognition').props.onPress(); await flush();
+  assert.equal(unavailable.log.reloads, 1);
+  console.log('PASS model failure preserves camera preview and exposes recognition retry');
+
+  for (const options of [{ platform: 'web' }, { permission: { granted: false, canAskAgain: false } }]) {
     const app = fixture(options);
     assert(!app.nodes().some((node) => node.type === 'CameraView'));
     assert(app.nodes().some((node) => node.type === 'ChoicePicker'));
     if (options.permission) assert(app.button('Open device settings'));
   }
-  console.log('PASS web, unavailable model and denied permission preserve manual selection');
+  console.log('PASS web and denied permission preserve manual selection');
 
   let resolvePhoto;
   const pending = fixture({ photo: () => new Promise((resolve) => { resolvePhoto = resolve; }), result: { status: 'recognized', landmark, candidates: [] } });

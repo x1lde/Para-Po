@@ -67,7 +67,8 @@
           "enableCoreMLDelegate": true,
           "enableAndroidGpuLibraries": true
         }
-      ]
+      ],
+      "expo-asset"
     ],
     "experiments": {
       "typedRoutes": true,
@@ -76,9 +77,9 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "06f3edf9-48ff-418e-bca2-5afdba6f30b2"
+        "projectId": "37c09c6f-2597-427f-b473-e417854bd2a9"
       }
     },
-    "owner": "x1lde"
+    "owner": "sleep-not-found"
   }
 }

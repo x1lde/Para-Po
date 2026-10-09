@@ -77,7 +77,8 @@ const isSelfCheckInput = (input) => input.length === SELF_CHECK_INPUT.length && 
  * delegate set is listed in `brokenSelfCheck` ('cpu' for []), which simulates a delegate that computes wrongly.
  */
 function serviceFixture({ scores = scoresFor({ greenbelt: 0.97 }), failDelegates = [], imageSize = [4032, 3024],
-  badShape = false, runError = null, flatPhoto = null, lookupError = null, brokenSelfCheck = [] } = {}) {
+  badShape = false, runError = null, flatPhoto = null, lookupError = null, brokenSelfCheck = [],
+  requireLocalAsset = false, assetDownloadError = null, localAssetUri = 'file:///cache/landmark_model.tflite' } = {}) {
   const log = { loads: [], crops: [], resizes: [], released: 0, runs: [], selfChecks: [], disposed: [] };
   const size = meta.input.shape[1];
   const rgba = photoPixels(size, flatPhoto);
@@ -97,10 +98,17 @@ function serviceFixture({ scores = scoresFor({ greenbelt: 0.97 }), failDelegates
     if (landmark.classificationLabel) landmarksByLabel.set(landmark.classificationLabel, landmark);
   }
   const mocks = {
+    'expo-asset': { Asset: { fromModule: () => ({
+      uri: 'assets_models_landmark_model', localUri: null,
+      async downloadAsync() { if (assetDownloadError) throw assetDownloadError; this.localUri = localAssetUri; return this; },
+    }) } },
     'react-native': { Platform: { OS: 'android' } },
     'expo-image-manipulator': { ImageManipulator: { manipulate: () => context }, SaveFormat: { JPEG: 'jpeg' } },
     'react-native-fast-tflite': {
       loadTensorflowModel: async (asset, delegates) => {
+        if (requireLocalAsset && (typeof asset !== 'object' || !asset.url?.startsWith('file://'))) {
+          throw new Error('Android release resource identifiers are not URLs');
+        }
         log.loads.push(delegates);
         if (delegates.some((delegate) => failDelegates.includes(delegate))) throw new Error('delegate unavailable');
         const name = delegates.length ? delegates.join('+') : 'cpu';
@@ -135,6 +143,44 @@ function serviceFixture({ scores = scoresFor({ greenbelt: 0.97 }), failDelegates
 }
 
 async function main() {
+  await check('recognition hook retries a failed initial model load', async () => {
+    const slots = [], effects = [];
+    let cursor = 0, mounted = false, loads = 0;
+    const loadHook = runtime({
+      react: {
+        useRef: (initial) => { const i = cursor++; return slots[i] ??= { current: initial }; },
+        useState: (initial) => { const i = cursor++; if (!(i in slots)) slots[i] = initial; return [slots[i], (value) => { slots[i] = value; }]; },
+        useCallback: (callback) => callback,
+        useEffect: (callback) => { if (!mounted) effects.push(callback); },
+      },
+      'react-native': { Platform: { OS: 'android' } },
+      '../services/recognition-service': {
+        loadLandmarkModel: async () => { if (++loads === 1) throw new Error('first load failed'); return {}; },
+        recognizeLandmark: async () => ({ status: 'uncertain', candidates: [] }),
+      },
+    })('src/features/recognition/hooks/use-landmark-recognition.ts');
+    const render = () => { cursor = 0; return loadHook.useLandmarkRecognition(); };
+    render(); mounted = true; effects.forEach((effect) => effect());
+    await new Promise((resolve) => setImmediate(resolve));
+    const failed = render();
+    assert.equal(failed.state.status, 'unavailable');
+    assert.equal(typeof failed.reload, 'function');
+    await failed.reload();
+    assert.equal(render().state.status, 'ready');
+    assert.equal(loads, 2);
+  });
+  await check('Android release model is resolved to a local file before native loading', async () => {
+    const fixture = serviceFixture({ requireLocalAsset: true });
+    const result = await fixture.service.recognizeLandmark('file:///photo.jpg');
+    assert.equal(result.status, 'recognized', 'a bundled resource must work without a Metro server');
+  });
+  await check('missing local model or failed extraction reports model-load-failed', async () => {
+    for (const options of [{ assetDownloadError: new Error('extraction failed') }, { localAssetUri: null }]) {
+      const result = await serviceFixture(options).service.recognizeLandmark('file:///photo.jpg');
+      assert.equal(result.status, 'unavailable');
+      assert.equal(result.reason, 'model-load-failed');
+    }
+  });
   const load = runtime({ 'expo-image-manipulator': {}, 'react-native': { Platform: { OS: 'android' } } });
   const scoring = load('src/features/recognition/services/scoring.ts');
   const preprocess = load('src/features/recognition/services/preprocess.ts');

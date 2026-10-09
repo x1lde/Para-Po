@@ -1,0 +1,16 @@
+{
+  "capturedAt": "2026-10-09T21:28:22.173Z",
+  "url": "http://localhost:8081/camera",
+  "viewport": {
+    "width": 430,
+    "height": 900
+  },
+  "deviceScaleFactor": 2,
+  "offlineLookupPassed": true,
+  "offlineDestinationChanges": [
+    "glorietta",
+    "one_ayala"
+  ],
+  "errors": [],
+  "limitations": "Web manual workflow. Initial app load online; networking disabled before changing destination to Glorietta and then back to One Ayala. No physical-device recognition capture."
+}

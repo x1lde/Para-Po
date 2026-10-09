@@ -7,9 +7,11 @@ import type { RecognitionResult, RecognizerState } from '../types';
 /** Loads the landmark model when mounted; `recognize` works on photo file URIs. */
 export function useLandmarkRecognition(): {
   state: RecognizerState;
+  reload: () => Promise<void>;
   recognize: (photoUri: string) => Promise<RecognitionResult>;
 } {
   const mounted = useRef(true);
+  const loadRequest = useRef(0);
   const [state, setState] = useState<RecognizerState>(
     Platform.OS === 'web' ? { status: 'unavailable', reason: 'unsupported-platform' } : { status: 'loading' }
   );
@@ -19,17 +21,34 @@ export function useLandmarkRecognition(): {
     return () => { mounted.current = false; };
   }, []);
 
-  useEffect(() => {
-    if (Platform.OS === 'web') return;
-    let active = true;
-    loadLandmarkModel().then(
-      () => active && setState({ status: 'ready' }),
-      (error: unknown) => active && setState({ status: 'unavailable', reason: 'model-load-failed', error })
+  const load = useCallback(() => {
+    if (Platform.OS === 'web') return Promise.resolve();
+    const request = ++loadRequest.current;
+    return loadLandmarkModel().then(
+      () => {
+        if (mounted.current && request === loadRequest.current) setState({ status: 'ready' });
+      },
+      (error: unknown) => {
+        console.warn('Landmark model could not load:', error);
+        if (mounted.current && request === loadRequest.current) {
+          setState({ status: 'unavailable', reason: 'model-load-failed', error });
+        }
+      }
     );
-    return () => {
-      active = false;
-    };
   }, []);
+
+  const reload = useCallback(() => {
+    if (Platform.OS === 'web') return Promise.resolve();
+    setState({ status: 'loading' });
+    return load();
+  }, [load]);
+
+  useEffect(() => {
+    void load();
+    return () => {
+      loadRequest.current += 1;
+    };
+  }, [load]);
 
   const recognize = useCallback(async (photoUri: string) => {
     const result = await recognizeLandmark(photoUri);
@@ -42,5 +61,5 @@ export function useLandmarkRecognition(): {
     return result;
   }, []);
 
-  return { state, recognize };
+  return { state, recognize, reload };
 }

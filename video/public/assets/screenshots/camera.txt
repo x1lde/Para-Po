@@ -1,0 +1,9 @@
+Back to ride planner
+A landmark is all it takes.
+Point at a familiar Makati building or place. Keep the landmark centred in the photo.
+Photo recognition is available in the mobile app. Choose your landmark below.
+Choose a starting landmark manually
+Choose a nearby landmark
+Ride
+Map
+Guide

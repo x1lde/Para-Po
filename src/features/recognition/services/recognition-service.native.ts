@@ -1,4 +1,5 @@
 import { Platform } from 'react-native';
+import { Asset } from 'expo-asset';
 import { loadTensorflowModel, type TensorflowModelDelegate, type TfliteModel } from 'react-native-fast-tflite';
 
 import { findLandmarkByClassificationLabel } from '@/database/repositories/transport-repository';
@@ -60,11 +61,18 @@ async function assertSelfCheck(model: TfliteModel) {
 
 async function loadModel(): Promise<TfliteModel> {
   assertLabelsMatchDataset();
+  // Release APKs resolve bundled assets to Android resource names. TFLite's
+  // URL-based loader needs a real file URI, so copy the bundled resource locally.
+  const asset = Asset.fromModule(LANDMARK_MODEL_ASSET);
+  await asset.downloadAsync();
+  if (!asset.localUri?.startsWith('file://')) {
+    throw new Error('The bundled landmark model could not be opened as a local file.');
+  }
   let lastError: unknown;
   for (const delegates of PREFERRED_DELEGATES) {
     let model: TfliteModel | undefined;
     try {
-      model = await loadTensorflowModel(LANDMARK_MODEL_ASSET, delegates);
+      model = await loadTensorflowModel({ url: asset.localUri }, delegates);
       assertModelShape(model);
       await assertSelfCheck(model);
       return model;

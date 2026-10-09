@@ -23,7 +23,7 @@ const UNCLEAR_PHOTO_MESSAGES: Record<PhotoIssue, string> = {
 
 export function LandmarkCamera() {
   const theme = useTheme();
-  const { state, recognize } = useLandmarkRecognition();
+  const { state, recognize, reload } = useLandmarkRecognition();
   const [permission, requestPermission, refreshPermission] = useCameraPermissions();
   const camera = useRef<CameraView>(null);
   const sequence = useRef(0);
@@ -113,9 +113,13 @@ export function LandmarkCamera() {
         <View style={styles.cameraHeading}><Icon name="scan" size={28} /><ThemedText type="subtitle">A landmark is all it takes.</ThemedText></View>
         <ThemedText>Point at a familiar Makati building or place. Keep the landmark centred in the photo.</ThemedText>
         {Platform.OS === 'web' ? <ThemedText>Photo recognition is available in the mobile app. Choose your landmark below.</ThemedText>
-          : state.status === 'unavailable' ? <ThemedText>Photo recognition is unavailable. Choose your landmark below.</ThemedText>
           : <>
             {state.status === 'loading' && <><ActivityIndicator accessibilityLabel="Loading landmark recognition" /><ThemedText>Loading photo recognition…</ThemedText></>}
+            {state.status === 'unavailable' && <>
+              <ThemedText>Offline photo recognition could not start. Retry it or choose your landmark below.</ThemedText>
+              <Pressable accessibilityRole="button" style={({ pressed }) => [styles.button, { borderColor: theme.line, backgroundColor: theme.backgroundSelected, opacity: pressed ? .65 : 1 }]}
+                onPress={() => { void reload(); }}><ThemedText type="link">Retry recognition</ThemedText></Pressable>
+            </>}
             {!permission ? <ThemedText>Checking camera permission…</ThemedText>
               : !permission.granted ? <>
                 <ThemedText>Allow camera access to take a landmark photo, or choose manually below.</ThemedText>

@@ -1,0 +1,89 @@
+{
+  "name": "Para-Po \u2014 local tools",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "features": {
+    "ghcr.io/devcontainers/features/sshd:1": {
+      "version": "latest"
+    },
+    "ghcr.io/devcontainers/features/github-cli:1": {},
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {}
+  },
+  "remoteUser": "node",
+  "forwardPorts": [
+    8081,
+    3000,
+    54321,
+    54323,
+    37700
+  ],
+  "portsAttributes": {
+    "8081": {
+      "label": "Expo web / Metro",
+      "onAutoForward": "notify"
+    },
+    "37700": {
+      "label": "claude-mem",
+      "onAutoForward": "silent"
+    }
+  },
+  "postCreateCommand": "bash .devcontainer/setup.sh",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "teabyii.ayu",
+        "esbenp.prettier-vscode",
+        "adorabilis.nord-midnight",
+        "solnurkarim.html-to-css-autocompletion",
+        "cardinal90.multi-cursor-case-preserve",
+        "pranaygp.vscode-css-peek",
+        "whizkydee.material-palenight-theme",
+        "zignd.html-css-class-completion",
+        "enkia.tokyo-night",
+        "usernamehw.errorlens",
+        "moyu.snapcode",
+        "clqiao.ayu-cola",
+        "faceair.ayu-one-dark",
+        "streetsidesoftware.code-spell-checker",
+        "chakrounanas.turbo-console-log",
+        "ms-vscode.cmake-tools",
+        "ritwickdey.liveserver",
+        "ms-vscode.cpp-devtools",
+        "ms-vscode.cpptools-themes",
+        "ms-ceintl.vscode-language-pack-pt-br",
+        "ms-ceintl.vscode-language-pack-fr",
+        "ms-ceintl.vscode-language-pack-ko",
+        "formulahendry.auto-rename-tag",
+        "merko.merko-green-theme",
+        "ms-ceintl.vscode-language-pack-it",
+        "ms-ceintl.vscode-language-pack-zh-hans",
+        "ms-ceintl.vscode-language-pack-ja",
+        "ms-vscode.cpptools-extension-pack",
+        "ms-ceintl.vscode-language-pack-es",
+        "ms-ceintl.vscode-language-pack-pl",
+        "ms-ceintl.vscode-language-pack-de",
+        "ms-ceintl.vscode-language-pack-ru",
+        "ms-ceintl.vscode-language-pack-zh-hant",
+        "akhail.save-typing",
+        "ms-ceintl.vscode-language-pack-cs",
+        "ms-python.debugpy",
+        "formulahendry.code-runner",
+        "xabikos.javascriptsnippets",
+        "twxs.cmake",
+        "ms-python.vscode-pylance",
+        "pkief.material-icon-theme",
+        "eamodio.gitlens",
+        "arthurlobo.easy-codesnap",
+        "ms-vscode.cpptools",
+        "ms-python.python",
+        "anthropic.claude-code",
+        "dbaeumer.vscode-eslint",
+        "openai.chatgpt"
+      ],
+      "settings": {
+        "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python"
+      }
+    }
+  }
+}

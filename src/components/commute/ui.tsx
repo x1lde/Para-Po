@@ -1,4 +1,5 @@
 import { Image } from 'expo-image';
+import { fromByteArray } from 'base64-js';
 import { ScrollView, StyleSheet, View, type ViewProps } from 'react-native';
 import { Children, type ReactNode, useEffect, useRef } from 'react';
 import Animated, { useAnimatedStyle, useReducedMotion, useSharedValue, withSequence, withSpring, withTiming } from 'react-native-reanimated';
@@ -34,7 +35,9 @@ const paths = {
 export function Icon({ name, size = 20, color }: { name: keyof typeof paths; size?: number; color?: string }) {
   const theme = useTheme();
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="${color ?? theme.primary}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${paths[name]}</svg>`;
-  return <Image source={{ uri: `data:image/svg+xml,${encodeURIComponent(svg)}` }} style={{ width: size, height: size }} accessibilityElementsHidden />;
+  // Android's image loader expects Base64 for data URLs. These SVGs are ASCII.
+  const encoded = fromByteArray(Uint8Array.from(svg, (character) => character.charCodeAt(0)));
+  return <Image source={{ uri: `data:image/svg+xml;base64,${encoded}` }} style={{ width: size, height: size }} accessibilityElementsHidden />;
 }
 export const artwork = {
   warm: require('../../../assets/reference-ui/hero-warm.svg'),
