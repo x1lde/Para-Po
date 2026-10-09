@@ -8,6 +8,8 @@ import { filterOptionsByMode, getDestinationChoices, type RideModeFilter } from 
 import type { BoardingOption, Destination, Landmark, TransportLookupResult, TransportationType } from '@/features/transport/types';
 import { Radius, Space } from '@/constants/theme';
 import { useMapJourney } from '@/features/maps/components/journey-context';
+import { selectJourneyDestination, selectJourneyOrigin } from '@/features/maps/components/journey-selection';
+import { ridePlannerMinWidth } from '@/features/transport/components/responsive-layout';
 import { TransportMap } from '@/features/maps/components/TransportMap';
 
 type PickerKind = 'origin' | 'destination';
@@ -26,7 +28,7 @@ const modeFilters: { id: RideModeFilter; label: string }[] = [
 ];
 
 export default function RideScreen() {
-  const { setJourney } = useMapJourney();
+  const { journey, setJourney } = useMapJourney();
   const colors = useAppColors();
   const { width } = useWindowDimensions();
   const wide = width >= 1024;
@@ -45,9 +47,16 @@ export default function RideScreen() {
   const [screen, setScreen] = useState<ScreenState>('planning');
   const [lookupState, setLookupState] = useState<LookupState>('idle');
   const [lookupResult, setLookupResult] = useState<TransportLookupResult | null>(null);
+  const [lookupPair, setLookupPair] = useState<string | null>(null);
   const [selectedRide, setSelectedRide] = useState<BoardingOption | null>(null);
   const [modeFilter, setModeFilter] = useState<RideModeFilter>('all');
   const lookupRequest = useRef(0);
+  const selectedOrigin = journey ? landmarks.find((place) => place.id === journey.originId) ?? null : origin;
+  const selectedDestination = journey ? destinations.find((place) => place.id === journey.destinationId) ?? null : destination;
+  const currentPair = `${selectedOrigin?.id ?? ''}\u0000${selectedDestination?.id ?? ''}`;
+  const currentPairRef = useRef(currentPair);
+  useEffect(() => { currentPairRef.current = currentPair; }, [currentPair]);
+  const visibleScreen = screen !== 'planning' && lookupPair !== currentPair ? 'planning' : screen;
 
   useEffect(() => {
     if (!commuterDataAvailable) return;
@@ -76,18 +85,18 @@ export default function RideScreen() {
   }, [destinationAttempt]);
 
   const clearPreviousRoute = () => {
-    setJourney(null);
     lookupRequest.current += 1;
     setLookupState('idle');
     setLookupResult(null);
+    setLookupPair(null);
     setSelectedRide(null);
     setModeFilter('all');
     setScreen('planning');
   };
 
   const openMap = (option?: BoardingOption) => {
-    setJourney(origin && destination ? {
-      originId: origin.id, destinationId: destination.id,
+    setJourney(selectedOrigin && selectedDestination ? {
+      originId: selectedOrigin.id, destinationId: selectedDestination.id,
       routeId: option?.route.id, boardingPointId: option?.boardingPoint.id,
     } : null);
     router.navigate('/map');
@@ -101,19 +110,19 @@ export default function RideScreen() {
   const choosePlace = (place: Place) => {
     if (picker === 'origin') {
       const nextOrigin = place as Landmark;
-      if (nextOrigin.id !== origin?.id) {
-        const nextDestination = destination?.id === nextOrigin.id ? null : destination;
+      if (nextOrigin.id !== selectedOrigin?.id) {
+        const nextDestination = selectedDestination?.id === nextOrigin.id ? null : selectedDestination;
         setOrigin(nextOrigin);
         setDestination(nextDestination);
         clearPreviousRoute();
-        if (nextDestination) setJourney({ originId: nextOrigin.id, destinationId: nextDestination.id });
+        setJourney((current) => selectJourneyOrigin(current, nextOrigin.id));
       }
     } else if (picker === 'destination') {
       const nextDestination = place as Destination;
-      if (nextDestination.id !== destination?.id) {
+      if (nextDestination.id !== selectedDestination?.id) {
         setDestination(nextDestination);
         clearPreviousRoute();
-        if (origin) setJourney({ originId: origin.id, destinationId: nextDestination.id });
+        setJourney((current) => selectJourneyDestination(current, nextDestination.id));
       }
     }
     setPicker(null);
@@ -121,21 +130,23 @@ export default function RideScreen() {
   };
 
   const findRide = async () => {
-    if (!origin || !destination || destination.id === origin.id) return;
-    setJourney({ originId: origin.id, destinationId: destination.id });
+    if (!selectedOrigin || !selectedDestination || selectedDestination.id === selectedOrigin.id) return;
+    setJourney({ originId: selectedOrigin.id, destinationId: selectedDestination.id });
     const requestId = ++lookupRequest.current;
+    const requestedPair = `${selectedOrigin.id}\u0000${selectedDestination.id}`;
+    setLookupPair(requestedPair);
     setLookupState('loading');
     setLookupResult(null);
     setSelectedRide(null);
     setModeFilter('all');
     setScreen('options');
     try {
-      const result = await lookupTransportation(origin.id, destination.id, true);
-      if (requestId !== lookupRequest.current) return;
+      const result = await lookupTransportation(selectedOrigin.id, selectedDestination.id, true);
+      if (requestId !== lookupRequest.current || requestedPair !== currentPairRef.current) return;
       setLookupResult(result);
       setLookupState('ready');
     } catch {
-      if (requestId !== lookupRequest.current) return;
+      if (requestId !== lookupRequest.current || requestedPair !== currentPairRef.current) return;
       setLookupState('error');
     }
   };
@@ -152,9 +163,9 @@ export default function RideScreen() {
 
   return (
     <ScreenFrame>
-      <View style={[styles.mainLayout, wide && screen === 'planning' ? styles.wideLayout : null]}>
-        {screen === 'planning' ? (
-          <View style={styles.planner}>
+      <View style={[styles.mainLayout, wide && visibleScreen === 'planning' ? styles.wideLayout : null]}>
+        {visibleScreen === 'planning' ? (
+          <View style={[styles.planner, { minWidth: ridePlannerMinWidth(width, Space.four * 2) }]}>
             <View style={styles.intro}>
               <Kicker>Makati commute guide</Kicker>
               <Text accessibilityRole="header" style={[typography.pageTitle, width < 360 ? styles.compactPageTitle : null, { color: colors.text }]}>Saan ka papunta?</Text>
@@ -187,10 +198,10 @@ export default function RideScreen() {
                 </View>
               </View>
               <View style={styles.fields}>
-                <RouteField label="Starting point" icon="location" value={origin?.name} onPress={() => openPicker('origin')} />
-                <RouteField label="Destination" icon="destination" value={destination?.name} onPress={() => openPicker('destination')} />
+                <RouteField label="Starting point" icon="location" value={selectedOrigin?.name} onPress={() => openPicker('origin')} />
+                <RouteField label="Destination" icon="destination" value={selectedDestination?.name} onPress={() => openPicker('destination')} />
               </View>
-              <PrimaryButton label="Find my ride" icon="arrowRight" onPress={findRide} disabled={!origin || !destination || destination.id === origin.id || lookupState === 'loading'} />
+              <PrimaryButton label="Find my ride" icon="arrowRight" onPress={findRide} disabled={!selectedOrigin || !selectedDestination || selectedDestination.id === selectedOrigin.id || lookupState === 'loading'} />
               <View style={[styles.infoBox, { backgroundColor: colors.backgroundSelected }]}>
                 <AppIcon name="info" size={16} color={colors.plum} />
                 <BodyText style={styles.infoText}>
@@ -219,8 +230,11 @@ export default function RideScreen() {
           </View>
         ) : (
           <View style={styles.planner}>
-            <JourneySummary origin={origin} destination={destination} onEdit={() => { clearPreviousRoute(); }} />
-            {screen === 'options' ? (
+            <JourneySummary origin={selectedOrigin} destination={selectedDestination} onEdit={() => {
+              clearPreviousRoute();
+              if (selectedOrigin && selectedDestination) setJourney({ originId: selectedOrigin.id, destinationId: selectedDestination.id });
+            }} />
+            {visibleScreen === 'options' ? (
               <>
                 <View style={styles.intro}>
                   <Kicker>Offline route catalog</Kicker>
@@ -236,7 +250,7 @@ export default function RideScreen() {
                   onSelect={(option) => {
                     if (!currentOptions.some((item) => item.route.id === option.route.id && item.boardingPoint.id === option.boardingPoint.id)) return;
                     setSelectedRide(option);
-                    if (origin && destination) setJourney({ originId: origin.id, destinationId: destination.id,
+                    if (selectedOrigin && selectedDestination) setJourney({ originId: selectedOrigin.id, destinationId: selectedDestination.id,
                       routeId: option.route.id, boardingPointId: option.boardingPoint.id });
                     setScreen('boarding');
                   }}
@@ -257,7 +271,7 @@ export default function RideScreen() {
           </View>
         )}
 
-        {wide && screen === 'planning' ? <MapPreview onOpen={() => openMap()} /> : null}
+        {wide && visibleScreen === 'planning' ? <MapPreview onOpen={() => openMap()} /> : null}
       </View>
 
       <PlacePicker
@@ -268,7 +282,7 @@ export default function RideScreen() {
         destinations={destinations}
         catalogState={catalogState}
         destinationState={destinationState}
-        origin={origin}
+        origin={selectedOrigin}
         onChoose={choosePlace}
         onClose={() => { setPicker(null); setPlaceQuery(''); }}
         onRetryLandmarks={() => { setCatalogState('loading'); setCatalogAttempt((attempt) => attempt + 1); }}
@@ -625,7 +639,7 @@ function transportLabel(type: TransportationType): string {
 const styles = StyleSheet.create({
   mainLayout: { width: '100%', gap: Space.four },
   wideLayout: { flexDirection: 'row', alignItems: 'flex-start', gap: Space.seven },
-  planner: { flex: 0.85, minWidth: 300, gap: Space.four },
+  planner: { flex: 0.85, gap: Space.four },
   intro: { gap: Space.two, paddingTop: Space.two },
   compactPageTitle: { fontSize: 32, lineHeight: 38, letterSpacing: -0.5 },
   scanCard: { borderWidth: 1, minHeight: 96, borderRadius: Radius.card, paddingHorizontal: Space.four, paddingVertical: Space.three, flexDirection: 'row', alignItems: 'center', gap: Space.three },

@@ -14,10 +14,11 @@ import { ChoicePicker } from './ChoicePicker';
 import { TransportMap } from './TransportMap';
 import { loadMapJourney } from './journey-loader';
 import { useMapJourney } from './journey-context';
+import { selectJourneyDestination, selectJourneyOrigin } from './journey-selection';
 import { router } from 'expo-router';
 
 export function JourneyMap() {
-  const { journey } = useMapJourney();
+  const { journey, setJourney } = useMapJourney();
   const [selectionUnavailable, setSelectionUnavailable] = useState(false);
   const [origins, setOrigins] = useState<Landmark[]>([]);
   const [destinations, setDestinations] = useState<Destination[]>([]);
@@ -110,9 +111,9 @@ export function JourneyMap() {
     <SafeAreaView edges={['top']} style={styles.header}><ThemedText type="subtitle">Plan your journey</ThemedText>
       <ThemedText type="small">Offline guidance · Online map</ThemedText>
       <View style={styles.row}><View style={styles.choice}><ChoicePicker label="Starting landmark" value={originId} choices={origins}
-        onSelect={(id) => void loadJourney(id, id === destinationId ? '' : destinationId)} /></View>
+        onSelect={(id) => setJourney((current) => selectJourneyOrigin(current, id))} /></View>
       <View style={styles.choice}><ChoicePicker label="Destination" value={destinationId} choices={destinations} disabled={loading}
-        onSelect={(id) => void loadJourney(originId, id)} /></View></View>
+        onSelect={(id) => setJourney((current) => selectJourneyDestination(current, id))} /></View></View>
       <View style={styles.row}>
         <Pressable accessibilityRole="button" disabled={locating} accessibilityState={{ disabled: locating }} style={styles.button} onPress={() => void locate()}>
           <ThemedText type="link">{locating ? 'Finding GPS...' : hasRequestedLocation ? 'Refresh GPS' : 'Use GPS'}</ThemedText></Pressable>
