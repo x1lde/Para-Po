@@ -31,7 +31,7 @@ export type RecognitionResult =
     }
   | {
       status: 'unavailable';
-      reason: 'unsupported-platform' | 'model-load-failed' | 'image-unreadable' | 'inference-failed';
+      reason: 'unsupported-platform' | 'model-load-failed' | 'image-unreadable' | 'inference-failed' | 'catalog-unavailable';
       error?: unknown;
     };
 

@@ -3,6 +3,12 @@
 On-device photo → landmark recognition with the bundled TensorFlow Lite model (`assets/models/`,
 trained in `ml/`). Runs offline; no network calls.
 
+The Ride screen opens a native camera scanner on demand. It requests camera permission only through the Allow camera control, waits for preview readiness before capture, and sends the captured file URI to the recognition service. Users confirm a recognized landmark; uncertain results offer candidate choices and manual selection. Denied permission, capture failure, model loading failure, malformed scores, and catalog errors retain manual fallback. Web and Expo Go do not load the native inference module. Closing the scanner ignores late capture/inference results and unmounts its camera preview.
+
+Malformed model scores return `inference-failed`; failed SQLite candidate lookups return `catalog-unavailable`. Neither rejects the recognition promise. Camera configuration enables still-photo access without adding Android audio recording permission. Native capture, inference speed, and airplane-mode behavior still require device checks.
+
+Audit-fix validation: TypeScript and lint pass; 10 mocked recognition checks, 13 offline-data checks, 11 map-scene checks, nine mocked location checks, and 13 selection/layout/integration tests pass. Android Hermes and web static exports include the scanner flow and platform fallback. These do not compile the native libraries or validate actual device capture/inference. The recognition check loader normalizes Windows paths so repository mocks resolve consistently.
+
 ## Use it
 
 ```tsx

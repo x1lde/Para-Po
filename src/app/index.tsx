@@ -11,6 +11,7 @@ import { useMapJourney } from '@/features/maps/components/journey-context';
 import { selectJourneyDestination, selectJourneyOrigin } from '@/features/maps/components/journey-selection';
 import { ridePlannerMinWidth } from '@/features/transport/components/responsive-layout';
 import { TransportMap } from '@/features/maps/components/TransportMap';
+import { ScanLandmark } from '@/features/recognition/components/ScanLandmark';
 
 type PickerKind = 'origin' | 'destination';
 type ScreenState = 'planning' | 'options' | 'boarding';
@@ -160,6 +161,9 @@ export default function RideScreen() {
     () => filterOptionsByMode(currentOptions, modeFilter),
     [currentOptions, modeFilter]
   );
+  const currentSelectedRide = journey
+    ? currentOptions.find((option) => option.route.id === journey.routeId && option.boardingPoint.id === journey.boardingPointId) ?? null
+    : selectedRide;
 
   return (
     <ScreenFrame>
@@ -174,7 +178,7 @@ export default function RideScreen() {
 
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Scan a landmark. Recognition is unavailable; manual landmark search is available."
+              accessibilityLabel="Scan a landmark or choose your starting point manually."
               onPress={() => setScanOpen(true)}
               onFocus={() => setScanFocused(true)}
               onBlur={() => setScanFocused(false)}
@@ -184,7 +188,7 @@ export default function RideScreen() {
               </View>
               <View style={styles.scanCopy}>
                 <Text style={[styles.scanTitle, { color: colors.primaryText }]}>Scan a landmark</Text>
-                <Text style={[styles.scanCaption, { color: colors.primaryText }]}>Recognition is unavailable; choose manually</Text>
+                <Text style={[styles.scanCaption, { color: colors.primaryText }]}>Recognize supported landmarks offline</Text>
               </View>
               <AppIcon name="arrowRight" size={18} color={colors.primaryText} />
             </Pressable>
@@ -259,8 +263,8 @@ export default function RideScreen() {
                 />
                 <ActionButton label="Back to trip planner" icon="arrowLeft" onPress={() => setScreen('planning')} />
               </>
-            ) : selectedRide ? (
-              <BoardingDetails option={selectedRide} onOpenMap={() => openMap(selectedRide)} onBack={() => setScreen('options')} />
+            ) : currentSelectedRide ? (
+              <BoardingDetails option={currentSelectedRide} onOpenMap={() => openMap(currentSelectedRide)} onBack={() => setScreen('options')} />
             ) : (
               <Card>
                 <Text style={[typography.sectionTitle, { color: colors.text }]}>This ride is no longer selected</Text>
@@ -288,7 +292,12 @@ export default function RideScreen() {
         onRetryLandmarks={() => { setCatalogState('loading'); setCatalogAttempt((attempt) => attempt + 1); }}
         onRetryDestinations={() => { setDestinationState('loading'); setDestinationAttempt((attempt) => attempt + 1); }}
       />
-      <ScanNotice visible={scanOpen} onClose={() => setScanOpen(false)} onChooseOrigin={() => { setScanOpen(false); openPicker('origin'); }} />
+      {scanOpen && <ScanLandmark onClose={() => setScanOpen(false)} onChooseManually={() => { setScanOpen(false); openPicker('origin'); }}
+        onSelect={(landmark) => {
+          setOrigin(landmark); clearPreviousRoute();
+          setJourney((current) => selectJourneyOrigin(current, landmark.id));
+          setScanOpen(false);
+        }} />}
     </ScreenFrame>
   );
 }
@@ -607,27 +616,6 @@ function PickerLoading() {
 function PickerEmpty({ title, copy, children }: { title: string; copy: string; children?: React.ReactNode }) {
   const colors = useAppColors();
   return <View style={[styles.emptyState, { backgroundColor: colors.backgroundElement }]}><Text style={[styles.emptyTitle, { color: colors.text }]}>{title}</Text><BodyText style={styles.emptyCopy}>{copy}</BodyText>{children}</View>;
-}
-
-function ScanNotice({ visible, onClose, onChooseOrigin }: { visible: boolean; onClose: () => void; onChooseOrigin: () => void }) {
-  const colors = useAppColors();
-  return (
-    <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
-      <View style={[styles.modalBackdrop, { backgroundColor: colors.scrim }]}>
-        <View accessibilityViewIsModal accessibilityRole="alert" style={[styles.dialog, { backgroundColor: colors.background }]}>
-          <View style={[styles.dialogIcon, { backgroundColor: colors.backgroundSelected }]}>
-            <AppIcon name="viewfinder" size={25} color={colors.plum} />
-          </View>
-          <Text accessibilityRole="header" style={[typography.sectionTitle, { color: colors.text }]}>Landmark scanning isn’t ready</Text>
-          <BodyText>The model and camera prediction service are not connected. No camera permission was requested and no scan was started.</BodyText>
-          <PrimaryButton label="Choose starting point" onPress={onChooseOrigin} icon="location" />
-          <Pressable accessibilityRole="button" onPress={onClose} style={styles.cancelButton}>
-            <Text style={[styles.cancelText, { color: colors.textSecondary }]}>Cancel</Text>
-          </Pressable>
-        </View>
-      </View>
-    </Modal>
-  );
 }
 
 function transportLabel(type: TransportationType): string {

@@ -3,7 +3,7 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'reac
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import type { Destination, Landmark, TransportLookupResult } from '@/features/transport/types';
+import type { BoardingOption, Destination, Landmark, TransportLookupResult } from '@/features/transport/types';
 import { getForegroundLocation } from '@/features/location/services/location-service';
 import { rankBoardingOptions } from '@/features/location/services/proximity';
 import type { LocationFix } from '@/features/location/types';
@@ -14,7 +14,7 @@ import { ChoicePicker } from './ChoicePicker';
 import { TransportMap } from './TransportMap';
 import { loadMapJourney } from './journey-loader';
 import { useMapJourney } from './journey-context';
-import { selectJourneyDestination, selectJourneyOrigin } from './journey-selection';
+import { chooseBoardingOption, selectJourneyDestination, selectJourneyOrigin } from './journey-selection';
 import { router } from 'expo-router';
 
 export function JourneyMap() {
@@ -41,7 +41,7 @@ export function JourneyMap() {
   const locationRequest = useRef<AbortController | null>(null);
   const loadJourney = useCallback(async (origin: string, requestedDestination = '', routeId?: string, boardingPointId?: string) => {
     const sequence = ++selectionSequence.current;
-    setLoading(true); setError(false); setSelectionUnavailable(false); setResult(null); setSelectedMarker(null); setOriginId(origin); setDestinationId(requestedDestination); setFocusMode('journey');
+    setLoading(true); setError(false); setSelectionUnavailable(false); setResult(null); setOriginId(origin); setDestinationId(requestedDestination); setFocusMode('journey');
     setSelectedBoardingId(boardingPointId ?? null); setSelectedRouteId(routeId);
     try {
       const next = await loadMapJourney({ originId: origin, destinationId: requestedDestination, routeId, boardingPointId });
@@ -100,11 +100,17 @@ export function JourneyMap() {
   const options = result && 'options' in result ? result.options : [];
   const ranked = rankBoardingOptions(options, fix);
   const boardingPoints = [...new Map(ranked.map((item) => [item.option.boardingPoint.id, item.option.boardingPoint])).values()];
+  const selectOption = (option: BoardingOption) => {
+    setSelectedBoardingId(option.boardingPoint.id); setSelectedRouteId(option.route.id);
+    setJourney((current) => current?.originId === originId && current.destinationId === destinationId &&
+      current.routeId === option.route.id && current.boardingPointId === option.boardingPoint.id ? current : {
+        originId, destinationId, routeId: option.route.id, boardingPointId: option.boardingPoint.id,
+      });
+  };
   const selectMarker = (marker: MapMarker) => {
     setSelectedMarker(marker);
-    const eligible = marker.kind === 'boarding' ? options.find((option) => `boarding:${option.boardingPoint.id}` === marker.id) : undefined;
-    setSelectedBoardingId(eligible?.boardingPoint.id ?? null);
-    setSelectedRouteId(eligible?.route.id);
+    const eligible = marker.kind === 'boarding' ? chooseBoardingOption(options, marker.id.slice('boarding:'.length), selectedRouteId) : undefined;
+    if (eligible) selectOption(eligible);
   };
   const activeMarker = scene.markers.find((marker) => marker.id === selectedMarker?.id);
   return <ThemedView style={styles.page}>
@@ -129,7 +135,7 @@ export function JourneyMap() {
       </Pressable>
     </SafeAreaView>
     <View style={styles.map}><TransportMap scene={scene} focusMode={focusMode} focusRequest={focusRequest} onMarkerPress={selectMarker}
-      selectedMarkerId={selectedBoardingId ? `boarding:${selectedBoardingId}` : activeMarker?.id} selectedRouteId={selectedRouteId} /></View>
+      selectedMarkerId={activeMarker?.id ?? (selectedBoardingId ? `boarding:${selectedBoardingId}` : undefined)} selectedRouteId={selectedRouteId} /></View>
     <ScrollView style={styles.guidance} contentContainerStyle={styles.content}>
       <View style={styles.legend}>
         {[['#32854b', 'Start'], ['#208AEF', 'Board'], ['#d33d46', 'Destination'], ['#7856c4', 'GPS']].map(([color, label]) =>
@@ -147,7 +153,7 @@ export function JourneyMap() {
         {activeMarker.details?.map((text) => <ThemedText type="small" key={text}>{text}</ThemedText>)}
         {activeMarker.routeNames?.map((name) => <ThemedText type="small" key={name}>{name}</ThemedText>)}
         {activeMarker.sourceReference && <ThemedText type="small" selectable>{activeMarker.sourceReference}</ThemedText>}
-        <Pressable accessibilityRole="button" onPress={() => { setSelectedMarker(null); setSelectedBoardingId(null); setSelectedRouteId(undefined); }} style={styles.button}><ThemedText type="link">Close details</ThemedText></Pressable>
+        <Pressable accessibilityRole="button" onPress={() => setSelectedMarker(null)} style={styles.button}><ThemedText type="link">Close details</ThemedText></Pressable>
       </ThemedView>}
       {boardingPoints.length > 0 && <>
         <ThemedText type="smallBold">Where to board</ThemedText>
@@ -158,7 +164,9 @@ export function JourneyMap() {
           const distance = matching.find((item) => item.distanceMeters !== null)?.distanceMeters;
           return <Pressable key={point.id} accessibilityRole="button" accessibilityState={{ selected: selectedBoardingId === point.id }}
             style={[styles.stop, selectedBoardingId === point.id && styles.selected]} onPress={() => {
-              setSelectedBoardingId(point.id); setSelectedRouteId(matching[0]?.option.route.id); setSelectedMarker(marker ?? null);
+              const option = chooseBoardingOption(options, point.id, selectedRouteId);
+              if (option) selectOption(option);
+              setSelectedMarker(marker ?? null);
             }}>
             <ThemedText type="smallBold">{point.name}</ThemedText>
             <ThemedText type="small">{[...new Set(matching.map((item) => item.option.route.name))].join(' · ')}</ThemedText>
@@ -175,7 +183,7 @@ export function JourneyMap() {
       {(result?.status === 'unsupported-origin' || result?.status === 'unsupported-destination') && <ThemedText>Select a supported location.</ThemedText>}
       {ranked.map(({ option, distanceMeters }, index) => <ThemedView type="backgroundElement" style={[styles.card, selectedBoardingId === option.boardingPoint.id && styles.selected]} key={`${option.route.id}:${option.boardingPoint.id}`}>
         <Pressable accessibilityRole="button" accessibilityState={{ selected: selectedRouteId === option.route.id }} style={styles.button} onPress={() => {
-          setSelectedBoardingId(option.boardingPoint.id); setSelectedRouteId(option.route.id);
+          selectOption(option);
           setSelectedMarker(scene.markers.find((marker) => marker.id === `boarding:${option.boardingPoint.id}`) ?? null);
         }}><ThemedText type="link">{selectedRouteId === option.route.id ? 'Selected option' : 'Select this option'}</ThemedText></Pressable>
         <ThemedText type="smallBold">{option.route.name}</ThemedText>

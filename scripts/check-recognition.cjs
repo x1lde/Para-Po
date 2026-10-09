@@ -30,7 +30,7 @@ function runtime(mocks = {}) {
       if (specifier in mocks) return mocks[specifier];
       if (specifier === 'jpeg-js') return jpeg;
       const target = resolve(specifier, filename);
-      const relative = path.relative(root, target);
+      const relative = path.relative(root, target).split(path.sep).join('/');
       if (mocks[relative] || mocks[`${relative}.ts`]) return mocks[relative] ?? mocks[`${relative}.ts`];
       for (const candidate of [target, `${target}.ts`, `${target}.native.ts`]) {
         if (/\.(json|tflite)$/.test(candidate) || (existsSync(candidate) && candidate.endsWith('.ts'))) return load(candidate);
@@ -55,7 +55,7 @@ function scoresFor(entries) {
 
 /** Native mocks: image manipulator (records crops/releases), TFLite (scripted), repository (dataset-backed). */
 function serviceFixture({ scores = scoresFor({ greenbelt: 0.97 }), failDelegates = [], imageSize = [4032, 3024],
-  badShape = false, runError = null } = {}) {
+  badShape = false, runError = null, lookupError = null } = {}) {
   const log = { loads: [], crops: [], resizes: [], released: 0, runs: [] };
   const size = meta.input.shape[1];
   const rgba = Buffer.alloc(size * size * 4);
@@ -94,7 +94,10 @@ function serviceFixture({ scores = scoresFor({ greenbelt: 0.97 }), failDelegates
       },
     },
     'src/database/repositories/transport-repository.ts': {
-      findLandmarkByClassificationLabel: async (label) => landmarksByLabel.get(label) ?? null,
+      findLandmarkByClassificationLabel: async (label) => {
+        if (lookupError) throw lookupError;
+        return landmarksByLabel.get(label) ?? null;
+      },
     },
   };
   const load = runtime(mocks);
@@ -209,6 +212,14 @@ async function main() {
     assert.equal(tiny.log.released, 2, 'native image refs are released on failure');
   });
 
+  await check('malformed scores and database failures return recoverable results', async () => {
+    const malformed = serviceFixture({ scores: new Float32Array(1) });
+    assert.equal((await malformed.service.recognizeLandmark('file:///photo.jpg')).reason, 'inference-failed');
+    const invalid = serviceFixture({ scores: new Float32Array(LABELS.length).fill(NaN) });
+    assert.equal((await invalid.service.recognizeLandmark('file:///photo.jpg')).reason, 'inference-failed');
+    const unavailable = serviceFixture({ lookupError: new Error('TEST ONLY database unavailable') });
+    assert.equal((await unavailable.service.recognizeLandmark('file:///photo.jpg')).reason, 'catalog-unavailable');
+  });
   await check('web build returns unsupported-platform without loading native modules', async () => {
     const web = runtime({})('src/features/recognition/services/recognition-service.ts');
     assert.deepEqual(await web.recognizeLandmark('file:///photo.jpg'), { status: 'unavailable', reason: 'unsupported-platform' });

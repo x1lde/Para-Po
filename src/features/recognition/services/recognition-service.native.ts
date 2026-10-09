@@ -100,16 +100,25 @@ export async function recognizeLandmark(photoUri: string): Promise<RecognitionRe
     return { status: 'unavailable', reason: 'inference-failed', error };
   }
 
-  const decision = interpretScores(scores, MODEL_LABELS, CONFIDENCE_THRESHOLD, NOT_A_LANDMARK_LABEL);
-  const candidates = await toCandidates(decision.candidates);
-  if (decision.kind === 'recognized') {
-    const [landmark] = await toCandidates([decision.top]);
-    // A label with no landmark row cannot be used as an origin; let the user choose instead.
-    if (!landmark) return { status: 'uncertain', candidates };
-    return { status: 'recognized', landmark: landmark.landmark, confidence: landmark.confidence, candidates };
+  let decision: ReturnType<typeof interpretScores>;
+  try {
+    decision = interpretScores(scores, MODEL_LABELS, CONFIDENCE_THRESHOLD, NOT_A_LANDMARK_LABEL);
+  } catch (error) {
+    return { status: 'unavailable', reason: 'inference-failed', error };
   }
-  if (decision.kind === 'not-a-landmark') {
-    return { status: 'not-a-landmark', confidence: decision.confidence, candidates };
+  try {
+    const candidates = await toCandidates(decision.candidates);
+    if (decision.kind === 'recognized') {
+      const [landmark] = await toCandidates([decision.top]);
+      // A label with no landmark row cannot be used as an origin; let the user choose instead.
+      if (!landmark) return { status: 'uncertain', candidates };
+      return { status: 'recognized', landmark: landmark.landmark, confidence: landmark.confidence, candidates };
+    }
+    if (decision.kind === 'not-a-landmark') {
+      return { status: 'not-a-landmark', confidence: decision.confidence, candidates };
+    }
+    return { status: 'uncertain', candidates };
+  } catch (error) {
+    return { status: 'unavailable', reason: 'catalog-unavailable', error };
   }
-  return { status: 'uncertain', candidates };
 }

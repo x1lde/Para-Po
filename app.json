@@ -39,6 +39,13 @@
         }
       ],
       "expo-sqlite",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow Para-Po to photograph supported landmarks for offline recognition.",
+          "recordAudioAndroid": false
+        }
+      ],
       "@maplibre/maplibre-react-native",
       [
         "expo-location",

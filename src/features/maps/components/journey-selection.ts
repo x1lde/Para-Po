@@ -17,3 +17,11 @@ export function selectJourneyDestination(current: MapJourneySelection | null, de
   const originId = current?.originId ?? '';
   return { originId, destinationId: originId === destinationId ? '' : destinationId };
 }
+
+/** Preserve the chosen route when several eligible routes share a boarding point. */
+export function chooseBoardingOption<T extends { route: { id: string }; boardingPoint: { id: string } }>(
+  options: readonly T[], boardingPointId: string, selectedRouteId?: string
+): T | undefined {
+  return options.find((option) => option.boardingPoint.id === boardingPointId && option.route.id === selectedRouteId)
+    ?? options.find((option) => option.boardingPoint.id === boardingPointId);
+}
