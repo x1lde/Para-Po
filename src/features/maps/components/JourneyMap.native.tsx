@@ -1,6 +1,8 @@
+import { useTheme } from '@/hooks/use-theme';
+import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useResponsiveLayout } from '@/hooks/use-responsive-layout';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { listDestinationsForOrigin, listLandmarks } from '@/database/repositories/transport-repository';
@@ -16,6 +18,10 @@ import { ChoicePicker } from './ChoicePicker';
 import { TransportMap } from './TransportMap';
 
 export function JourneyMap() {
+  const theme = useTheme();
+  const { tablet, desktop, gutter } = useResponsiveLayout();
+  const { originId: requestedOrigin, originRequest, destinationId: requestedDestination } = useLocalSearchParams<{ originId?: string | string[]; originRequest?: string; destinationId?: string }>();
+  const cameraOrigin = typeof requestedOrigin === 'string' ? requestedOrigin : undefined;
   const [origins, setOrigins] = useState<Landmark[]>([]);
   const [destinations, setDestinations] = useState<Destination[]>([]);
   const [originId, setOriginId] = useState('ayala_malls_circuit');
@@ -51,9 +57,9 @@ export function JourneyMap() {
   }, []);
   useEffect(() => {
     let active = true;
-    void Promise.resolve().then(() => { if (active) void loadJourney('ayala_malls_circuit'); });
+    void Promise.resolve().then(() => { if (active) void loadJourney(cameraOrigin ?? 'ayala_malls_circuit', requestedDestination ?? 'one_ayala'); });
     return () => { active = false; selectionSequence.current += 1; locationSequence.current += 1; locationRequest.current?.abort(); };
-  }, [loadJourney]);
+  }, [loadJourney, cameraOrigin, originRequest, requestedDestination]);
   useEffect(() => {
     if (!fix) return;
     const timer = setTimeout(() => {
@@ -99,41 +105,43 @@ export function JourneyMap() {
   };
   const activeMarker = scene.markers.find((marker) => marker.id === selectedMarker?.id);
   return <ThemedView style={styles.page}>
-    <SafeAreaView edges={['top']} style={styles.header}><ThemedText type="subtitle">Plan your journey</ThemedText>
-      <ThemedText type="small">Offline guidance · Online map</ThemedText>
-      <View style={styles.row}><View style={styles.choice}><ChoicePicker label="Starting landmark" value={originId} choices={origins}
+    <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={[styles.pageContent, { paddingHorizontal: gutter }]}>
+    <View style={[styles.header, { backgroundColor: theme.backgroundElement, borderColor: theme.line }]}><ThemedText type="subtitle">Plan your journey</ThemedText>
+      <ThemedText type="small">Your starting point. Your next ride.</ThemedText>
+      <View style={[styles.row, !tablet && { flexDirection: 'column' }]}><View style={styles.choice}><ChoicePicker label="Starting landmark" value={originId} choices={origins}
         onSelect={(id) => void loadJourney(id)} /></View>
       <View style={styles.choice}><ChoicePicker label="Destination" value={destinationId} choices={destinations} disabled={loading}
         onSelect={(id) => void loadJourney(originId, id)} /></View></View>
       <View style={styles.row}>
-        <Pressable accessibilityRole="button" disabled={locating} accessibilityState={{ disabled: locating }} style={styles.button} onPress={() => void locate()}>
+        <Pressable accessibilityRole="button" disabled={locating} accessibilityState={{ disabled: locating }} style={({ pressed }) => [styles.button, { backgroundColor: theme.backgroundSelected, opacity: pressed ? .65 : 1 }]} onPress={() => void locate()}>
           <ThemedText type="link">{locating ? 'Finding GPS...' : hasRequestedLocation ? 'Refresh GPS' : 'Use GPS'}</ThemedText></Pressable>
-        {locating && <Pressable accessibilityRole="button" style={styles.button} onPress={() => {
+        {locating && <Pressable accessibilityRole="button" style={({ pressed }) => [styles.button, { backgroundColor: theme.backgroundSelected, opacity: pressed ? .65 : 1 }]} onPress={() => {
           locationSequence.current += 1; locationRequest.current?.abort(); setLocating(false);
           setLocationMessage('GPS cancelled. Continue with manual landmark selection.');
         }}><ThemedText type="link">Cancel GPS</ThemedText></Pressable>}
-        <Pressable accessibilityRole="button" disabled={!result} accessibilityState={{ disabled: !result }} style={styles.button}
+        <Pressable accessibilityRole="button" disabled={!result} accessibilityState={{ disabled: !result }} style={({ pressed }) => [styles.button, { backgroundColor: theme.backgroundSelected, opacity: pressed ? .65 : 1 }]}
           onPress={() => { setFocusMode('journey'); setFocusRequest((value) => value + 1); }}><ThemedText type="link">Show this journey</ThemedText></Pressable>
       </View><ThemedText type="small">{locationMessage}</ThemedText>
-    </SafeAreaView>
-    <View style={styles.map}><TransportMap scene={scene} focusMode={focusMode} focusRequest={focusRequest} onMarkerPress={selectMarker}
+    </View>
+    <View style={[styles.body, desktop && { flexDirection: 'row' }]}>
+    <View style={[styles.map, { height: tablet ? 520 : 340, flex: desktop ? 1 : undefined }]}><TransportMap scene={scene} focusMode={focusMode} focusRequest={focusRequest} onMarkerPress={selectMarker}
       selectedMarkerId={selectedBoardingId ? `boarding:${selectedBoardingId}` : activeMarker?.id} selectedRouteId={selectedRouteId} /></View>
-    <ScrollView style={styles.guidance} contentContainerStyle={styles.content}>
+    <View style={[styles.content, desktop && { width: 390 }]}>
       <View style={styles.legend}>
-        {[['#32854b', 'Start'], ['#208AEF', 'Board'], ['#d33d46', 'Destination'], ['#7856c4', 'GPS']].map(([color, label]) =>
+        {[[theme.green, 'Start'], [theme.teal, 'Board'], [theme.orange, 'Destination'], [theme.gold, 'GPS']].map(([color, label]) =>
           <View key={label} style={styles.legendItem}><View style={[styles.dot, { backgroundColor: color }]} /><ThemedText type="small">{label}</ThemedText></View>)}
       </View>
-      {fix?.accuracyMeters !== null && fix?.accuracyMeters !== undefined && <ThemedText type="small">Purple area: reported GPS uncertainty, about {Math.round(fix.accuracyMeters)} m. It is not a walking radius.</ThemedText>}
+      {fix?.accuracyMeters !== null && fix?.accuracyMeters !== undefined && <ThemedText type="small">Shaded area: reported GPS uncertainty, about {Math.round(fix.accuracyMeters)} m. It is not a walking radius.</ThemedText>}
       {loading && <ActivityIndicator accessibilityLabel="Loading journey" />}
-      {error && <><ThemedText>Could not load local transportation data.</ThemedText><Pressable accessibilityRole="button" style={styles.button}
+      {error && <><ThemedText>Could not load local transportation data.</ThemedText><Pressable accessibilityRole="button" style={({ pressed }) => [styles.button, { backgroundColor: theme.backgroundSelected, opacity: pressed ? .65 : 1 }]}
         onPress={() => void loadJourney(originId, destinationId)}><ThemedText type="link">Retry data</ThemedText></Pressable></>}
       {!loading && !error && destinations.length === 0 && <ThemedText>No bundled journeys for this starting landmark yet. Choose Circuit or One Ayala.</ThemedText>}
-      {activeMarker && <ThemedView type="backgroundElement" style={styles.card}>
+      {activeMarker && <ThemedView type="backgroundElement" style={[styles.card, { borderColor: theme.line }]}>
         <ThemedText type="smallBold">{activeMarker.name}{activeMarker.approximate ? ' (approximate)' : ''}</ThemedText>
         {activeMarker.details?.map((text) => <ThemedText type="small" key={text}>{text}</ThemedText>)}
         {activeMarker.routeNames?.map((name) => <ThemedText type="small" key={name}>{name}</ThemedText>)}
         {activeMarker.sourceReference && <ThemedText type="small" selectable>{activeMarker.sourceReference}</ThemedText>}
-        <Pressable accessibilityRole="button" onPress={() => { setSelectedMarker(null); setSelectedBoardingId(null); setSelectedRouteId(undefined); }} style={styles.button}><ThemedText type="link">Close details</ThemedText></Pressable>
+        <Pressable accessibilityRole="button" onPress={() => { setSelectedMarker(null); setSelectedBoardingId(null); setSelectedRouteId(undefined); }} style={({ pressed }) => [styles.button, { backgroundColor: theme.backgroundSelected, opacity: pressed ? .65 : 1 }]}><ThemedText type="link">Close details</ThemedText></Pressable>
       </ThemedView>}
       {boardingPoints.length > 0 && <>
         <ThemedText type="smallBold">Where to board</ThemedText>
@@ -159,8 +167,8 @@ export function JourneyMap() {
       {result?.status === 'no-routes' && <ThemedText>No bundled route covers this combination.</ThemedText>}
       {result?.status === 'incomplete-guidance' && <ThemedText>Guidance is incomplete; these options need further review.</ThemedText>}
       {(result?.status === 'unsupported-origin' || result?.status === 'unsupported-destination') && <ThemedText>Select a supported location.</ThemedText>}
-      {ranked.map(({ option, distanceMeters }, index) => <ThemedView type="backgroundElement" style={[styles.card, selectedBoardingId === option.boardingPoint.id && styles.selected]} key={`${option.route.id}:${option.boardingPoint.id}`}>
-        <Pressable accessibilityRole="button" accessibilityState={{ selected: selectedRouteId === option.route.id }} style={styles.button} onPress={() => {
+      {ranked.map(({ option, distanceMeters }, index) => <ThemedView type="backgroundElement" style={[styles.card, { borderColor: theme.line }, selectedBoardingId === option.boardingPoint.id && styles.selected]} key={`${option.route.id}:${option.boardingPoint.id}`}>
+        <Pressable accessibilityRole="button" accessibilityState={{ selected: selectedRouteId === option.route.id }} style={({ pressed }) => [styles.button, { backgroundColor: theme.backgroundSelected, opacity: pressed ? .65 : 1 }]} onPress={() => {
           setSelectedBoardingId(option.boardingPoint.id); setSelectedRouteId(option.route.id);
           setSelectedMarker(scene.markers.find((marker) => marker.id === `boarding:${option.boardingPoint.id}`) ?? null);
         }}><ThemedText type="link">{selectedRouteId === option.route.id ? 'Selected option' : 'Select this option'}</ThemedText></Pressable>
@@ -177,16 +185,18 @@ export function JourneyMap() {
         <ThemedText type="small" selectable>Reviewed {option.route.reviewedOn}: {option.route.sourceReference}</ThemedText>
       </ThemedView>)}
       {result && <ThemedText type="small">Landmark pins are site references, not boarding stops. {scene.omittedLocations.length > 0 ? 'Some locations have no confirmed map position. ' : ''}{scene.routes.length === 0 ? 'A sourced vehicle path is not available yet.' : 'Vehicle paths use the recorded source geometry.'}</ThemedText>}
+    </View>
+    </View>
     </ScrollView>
   </ThemedView>;
 }
 
 const styles = StyleSheet.create({
-  page: { flex: 1 }, header: { padding: 12, gap: 6 }, row: { flexDirection: 'row', flexWrap: 'wrap' },
-  choice: { flex: 1, minWidth: 130 }, button: { minHeight: 48, padding: 12, justifyContent: 'center' },
-  map: { flex: 1, minHeight: 180 }, guidance: { maxHeight: '40%' }, content: { padding: 16, gap: 12 },
-  card: { padding: 14, borderRadius: 12, gap: 6, borderWidth: 2, borderColor: 'transparent' },
+  page: { flex: 1 }, pageContent: { width: '100%', maxWidth: 1200, alignSelf: 'center', paddingTop: 20, paddingBottom: 28, gap: 20 }, body: { gap: 20 }, header: { padding: 20, gap: 12, borderWidth: 1, borderRadius: 20 }, row: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  choice: { flex: 1, minWidth: 130 }, button: { minHeight: 48, padding: 12, justifyContent: 'center', borderRadius: 12 },
+  map: { minHeight: 300, borderRadius: 20, overflow: 'hidden' }, content: { gap: 12 },
+  card: { padding: 23, borderRadius: 20, gap: 8, borderWidth: 1, borderColor: '#DDE5DF' },
   stop: { minHeight: 48, padding: 14, gap: 6, borderRadius: 12, borderWidth: 2, borderColor: '#808080' },
-  selected: { borderColor: '#e58a00' }, legend: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  selected: { borderColor: '#117C83' }, legend: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 }, dot: { width: 10, height: 10, borderRadius: 5 },
 });

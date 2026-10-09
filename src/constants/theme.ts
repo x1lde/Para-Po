@@ -1,65 +1,47 @@
-/**
- * Below are the colors that are used in the app. The colors are defined in the light and dark mode.
- * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://reactnativeunistyles.vercel.app), etc.
- */
-
 import '@/global.css';
-
 import { Platform } from 'react-native';
+
+/** ParaPo!'s visual identity. Warm accents, readable ink, and confident teal actions. */
+export const Brand = {
+  yellow: '#F9C846', teal: '#117C83', orange: '#FF6B35', charcoal: '#24343B', cream: '#FFF9E9',
+} as const;
 
 export const Colors = {
   light: {
-    text: '#000000',
-    background: '#ffffff',
-    backgroundElement: '#F0F0F3',
-    backgroundSelected: '#E0E1E6',
-    textSecondary: '#60646C',
+    text: Brand.charcoal, background: Brand.cream, backgroundElement: '#FFFFFF',
+    backgroundSelected: '#E5F2F0', textSecondary: '#4D6267', primary: Brand.teal,
+    primaryText: '#FFFFFF', line: '#DDE5DF', soft: '#F6F8F4', green: '#17675D',
+    greenSoft: '#E5F2EA', gold: '#775300', goldSoft: '#FFF0BB',
+    yellow: Brand.yellow, orange: Brand.orange, teal: Brand.teal,
+    hero: Brand.yellow, onHero: Brand.charcoal, heroSecondary: '#40514D', highlight: '#FFE18A',
+    // Shared semantic roles keep auxiliary screens and map controls on the same identity.
+    plum: Brand.teal, success: '#17675D', border: '#DDE5DF', error: '#B23F25',
+    ring: Brand.teal, input: '#DDE5DF', danger: '#B23F25', gps: '#B34B20',
+    surfaceRaised: '#FFFFFF', scrim: '#152E36A6', controlMuted: '#728485',
+    accent: Brand.teal, onAccent: '#FFFFFF', onYellow: Brand.charcoal,
   },
   dark: {
-    text: '#ffffff',
-    background: '#000000',
-    backgroundElement: '#212225',
-    backgroundSelected: '#2E3135',
-    textSecondary: '#B0B4BA',
+    text: Brand.cream, background: '#15262C', backgroundElement: Brand.charcoal,
+    backgroundSelected: '#204B4F', textSecondary: '#C0D1CE', primary: '#79D7D7',
+    primaryText: '#15262C', line: '#426067', soft: '#2A4047', green: '#A5DBC3',
+    greenSoft: '#264B40', gold: Brand.yellow, goldSoft: '#51472A',
+    yellow: Brand.yellow, orange: '#FF9674', teal: '#79D7D7',
+    hero: Brand.yellow, onHero: Brand.charcoal, heroSecondary: '#40514D', highlight: '#FFE18A',
+    plum: '#79D7D7', success: '#A5DBC3', border: '#426067', error: '#FFAF96',
+    ring: '#79D7D7', input: '#426067', danger: '#FFAF96', gps: '#FF9674',
+    surfaceRaised: '#2A4047', scrim: '#071317B3', controlMuted: '#91AAA9',
+    accent: '#79D7D7', onAccent: '#15262C', onYellow: Brand.charcoal,
   },
 } as const;
-
 export type ThemeColor = keyof typeof Colors.light & keyof typeof Colors.dark;
 
-export const Fonts = Platform.select({
-  ios: {
-    /** iOS `UIFontDescriptorSystemDesignDefault` */
-    sans: 'system-ui',
-    /** iOS `UIFontDescriptorSystemDesignSerif` */
-    serif: 'ui-serif',
-    /** iOS `UIFontDescriptorSystemDesignRounded` */
-    rounded: 'ui-rounded',
-    /** iOS `UIFontDescriptorSystemDesignMonospaced` */
-    mono: 'ui-monospace',
-  },
-  default: {
-    sans: 'normal',
-    serif: 'serif',
-    rounded: 'normal',
-    mono: 'monospace',
-  },
-  web: {
-    sans: 'var(--font-display)',
-    serif: 'var(--font-serif)',
-    rounded: 'var(--font-rounded)',
-    mono: 'var(--font-mono)',
-  },
-});
-
-export const Spacing = {
-  half: 2,
-  one: 4,
-  two: 8,
-  three: 16,
-  four: 24,
-  five: 32,
-  six: 64,
-} as const;
-
+export const Fonts = {
+  sans: 'Inter-Regular', semibold: 'Inter-SemiBold', bold: 'Inter-Bold', display: 'Inter-ExtraBold',
+  serif: Platform.OS === 'web' ? 'Georgia, serif' : 'serif', rounded: 'Inter-Bold',
+  mono: Platform.OS === 'ios' ? 'ui-monospace' : 'monospace',
+};
+export const Spacing = { half: 2, one: 4, two: 8, three: 16, four: 24, five: 32, six: 64 } as const;
+export const Space = { one: 4, two: 8, three: 12, four: 16, five: 20, six: 24, seven: 32, eight: 40, nine: 48 } as const;
+export const Radius = { small: 8, medium: 12, card: 24, large: 28, pill: 999 } as const;
 export const BottomTabInset = Platform.select({ ios: 50, android: 80 }) ?? 0;
-export const MaxContentWidth = 800;
+export const MaxContentWidth = 1200;

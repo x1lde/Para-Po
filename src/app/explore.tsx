@@ -1,180 +1,47 @@
-import { Image } from 'expo-image';
-import { SymbolView } from 'expo-symbols';
-import { Platform, Pressable, ScrollView, StyleSheet } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
-import { ExternalLink } from '@/components/external-link';
+import { router } from 'expo-router';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Collapsible } from '@/components/ui/collapsible';
-import { WebBadge } from '@/components/web-badge';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
+import { Art, Button, Card, Icon, Intro, Page, ui } from '@/components/commute/ui';
+import { pilotDataset } from '@/database/data/pilot-dataset';
 import { useTheme } from '@/hooks/use-theme';
+import { useResponsiveLayout } from '@/hooks/use-responsive-layout';
 
-export default function TabTwoScreen() {
-  const safeAreaInsets = useSafeAreaInsets();
-  const insets = {
-    ...safeAreaInsets,
-    bottom: safeAreaInsets.bottom + BottomTabInset + Spacing.three,
-  };
-  const theme = useTheme();
-
-  const contentPlatformStyle = Platform.select({
-    android: {
-      paddingTop: insets.top,
-      paddingLeft: insets.left,
-      paddingRight: insets.right,
-      paddingBottom: insets.bottom,
-    },
-    web: {
-      paddingTop: Spacing.six,
-      paddingBottom: Spacing.four,
-    },
-  });
-
-  return (
-    <ScrollView
-      style={[styles.scrollView, { backgroundColor: theme.background }]}
-      contentInset={insets}
-      contentContainerStyle={[styles.contentContainer, contentPlatformStyle]}>
-      <ThemedView style={styles.container}>
-        <ThemedView style={styles.titleContainer}>
-          <ThemedText type="subtitle">Explore</ThemedText>
-          <ThemedText style={styles.centerText} themeColor="textSecondary">
-            This starter app includes example{'\n'}code to help you get started.
-          </ThemedText>
-
-          <ExternalLink href="https://docs.expo.dev" asChild>
-            <Pressable style={({ pressed }) => pressed && styles.pressed}>
-              <ThemedView type="backgroundElement" style={styles.linkButton}>
-                <ThemedText type="link">Expo documentation</ThemedText>
-                <SymbolView
-                  tintColor={theme.text}
-                  name={{ ios: 'arrow.up.right.square', android: 'link', web: 'link' }}
-                  size={12}
-                />
-              </ThemedView>
-            </Pressable>
-          </ExternalLink>
-        </ThemedView>
-
-        <ThemedView style={styles.sectionsWrapper}>
-          <Collapsible title="File-based routing">
-            <ThemedText type="small">
-              This app has two screens: <ThemedText type="code">src/app/index.tsx</ThemedText> and{' '}
-              <ThemedText type="code">src/app/explore.tsx</ThemedText>
-            </ThemedText>
-            <ThemedText type="small">
-              The layout file in <ThemedText type="code">src/app/_layout.tsx</ThemedText> sets up
-              the tab navigator.
-            </ThemedText>
-            <ExternalLink href="https://docs.expo.dev/router/introduction">
-              <ThemedText type="linkPrimary">Learn more</ThemedText>
-            </ExternalLink>
-          </Collapsible>
-
-          <Collapsible title="Android, iOS, and web support">
-            <ThemedView type="backgroundElement" style={styles.collapsibleContent}>
-              <ThemedText type="small">
-                You can open this project on Android, iOS, and the web. To open the web version,
-                press <ThemedText type="smallBold">w</ThemedText> in the terminal running this
-                project.
-              </ThemedText>
-              <Image
-                source={require('@/assets/images/tutorial-web.png')}
-                style={styles.imageTutorial}
-              />
-            </ThemedView>
-          </Collapsible>
-
-          <Collapsible title="Images">
-            <ThemedText type="small">
-              For static images, you can use the <ThemedText type="code">@2x</ThemedText> and{' '}
-              <ThemedText type="code">@3x</ThemedText> suffixes to provide files for different
-              screen densities.
-            </ThemedText>
-            <Image source={require('@/assets/images/react-logo.png')} style={styles.imageReact} />
-            <ExternalLink href="https://reactnative.dev/docs/images">
-              <ThemedText type="linkPrimary">Learn more</ThemedText>
-            </ExternalLink>
-          </Collapsible>
-
-          <Collapsible title="Light and dark mode components">
-            <ThemedText type="small">
-              This template has light and dark mode support. The{' '}
-              <ThemedText type="code">useColorScheme()</ThemedText> hook lets you inspect what the
-              user&apos;s current color scheme is, and so you can adjust UI colors accordingly.
-            </ThemedText>
-            <ExternalLink href="https://docs.expo.dev/develop/user-interface/color-themes/">
-              <ThemedText type="linkPrimary">Learn more</ThemedText>
-            </ExternalLink>
-          </Collapsible>
-
-          <Collapsible title="Animations">
-            <ThemedText type="small">
-              This template includes an example of an animated component. The{' '}
-              <ThemedText type="code">src/components/ui/collapsible.tsx</ThemedText> component uses
-              the powerful <ThemedText type="code">react-native-reanimated</ThemedText> library to
-              animate opening this hint.
-            </ThemedText>
-          </Collapsible>
-        </ThemedView>
-        {Platform.OS === 'web' && <WebBadge />}
-      </ThemedView>
-    </ScrollView>
-  );
+export default function LandmarkGuide() {
+  const t = useTheme();
+  const { tablet: wide, desktop } = useResponsiveLayout();
+  return <Page>
+    <Intro eyebrow="Every landmark is a starting point" title="Know your Makati." description="A little more confident. A little more local. One landmark at a time." />
+    <View style={[styles.overview, wide && { flexDirection: 'row' }]}>
+      <Card style={[styles.level, { backgroundColor: t.backgroundSelected, flex: 1 }]}>
+        <View style={ui.row}><View style={[styles.tag, { backgroundColor: t.backgroundElement }]}><ThemedText type="smallBold" style={{ color: t.primary }}>Makati pilot</ThemedText></View><ThemedText type="small" themeColor="textSecondary">Your local companion</ThemedText></View>
+        <View style={[ui.row, { justifyContent: 'space-between' }]}><View><ThemedText style={styles.total}>{pilotDataset.landmarks.length}</ThemedText><ThemedText type="small" themeColor="textSecondary">supported landmarks</ThemedText></View><Art name="star" size={106} /></View>
+        <ThemedText type="smallBold">Find your starting point</ThemedText><View style={[styles.bar, { backgroundColor: t.primary }]} />
+        <ThemedText type="small" themeColor="textSecondary">Scan a landmark or choose it manually. ParaPo! helps you take the next step.</ThemedText>
+      </Card>
+      <Card style={{ flex: 1, paddingVertical: 8 }}>{[
+        ['camera', 'On-device', 'Landmark recognition', 'No photo upload'],
+        ['map', String(pilotDataset.routes.length), 'bundled journey options', 'Local guidance'],
+        ['pin', String(pilotDataset.landmarks.length), 'places to start from', 'Makati City'],
+      ].map(([icon, value, label, note], i) => <View key={label} style={[styles.stat, { borderTopWidth: i ? 1 : 0, borderColor: t.line }]}>
+        <View style={[styles.statIcon, { backgroundColor: t.backgroundSelected }]}><Icon name={icon as 'camera' | 'map' | 'pin'} size={23} /></View>
+        <View style={{ flex: 1, gap: 4 }}><ThemedText style={{ fontSize: value === 'On-device' ? 22 : 28, lineHeight: 34, fontWeight: '700' }}>{value}</ThemedText><ThemedText type="small" themeColor="textSecondary">{label}</ThemedText><ThemedText type="small" themeColor="textSecondary">{note}</ThemedText></View>
+      </View>)}</Card>
+    </View>
+    <View><ThemedText type="subtitle">A few ways to get going</ThemedText><ThemedText type="small" themeColor="textSecondary">Choose what works for you.</ThemedText></View>
+    <View style={[styles.overview, desktop && { flexDirection: 'row' }]}>{[
+      { art: 'star' as const, title: 'Start with what you see', text: 'Point your camera at a supported landmark to find your starting point.', path: '/camera' as const, color: t.goldSoft },
+      { art: 'ejeep' as const, title: 'Signal? Optional.', text: 'Recognition and bundled guidance work offline. The interactive map needs a connection.', path: '/map' as const, color: t.backgroundSelected },
+      { art: 'pin' as const, title: 'A little more local', text: 'Choose a familiar Makati landmark and a destination to plan your journey.', path: '/' as const, color: t.greenSoft },
+    ].map((item) => <Pressable key={item.title} accessibilityRole="button" onPress={() => router.navigate(item.path)} style={({ pressed }) => [{ flex: 1, opacity: pressed ? .7 : 1 }]}>
+      <Card style={{ flex: 1 }}><View style={[styles.badge, { backgroundColor: item.color }]}><Art name={item.art} size={57} /></View><ThemedText type="smallBold">{item.title}</ThemedText><ThemedText type="small" themeColor="textSecondary">{item.text}</ThemedText></Card>
+    </Pressable>)}</View>
+    <View><ThemedText type="subtitle">Your familiar places</ThemedText><ThemedText type="small" themeColor="textSecondary">Tap a landmark to use it as your starting point. Journey coverage varies by place.</ThemedText></View>
+    <View style={styles.catalog}>{pilotDataset.landmarks.map((landmark) => <Pressable key={landmark.id} accessibilityRole="button"
+      style={({ pressed }) => [styles.landmark, { borderColor: t.line, backgroundColor: pressed ? t.backgroundSelected : t.backgroundElement, width: wide ? '48%' : '100%' }]}
+      onPress={() => router.navigate({ pathname: '/map', params: { originId: landmark.id, originRequest: String(Date.now()) } })}>
+      <Icon name="pin" /><ThemedText style={{ flex: 1 }}>{landmark.name}</ThemedText><Icon name="chevron" size={17} />
+    </Pressable>)}</View>
+    <Card><ThemedText type="subtitle">Ready for a little adventure?</ThemedText><ThemedText themeColor="textSecondary">Choose a starting point. We’ll help with the ride.</ThemedText><Button icon="arrow" onPress={() => router.navigate('/')}>Find a ride</Button></Card>
+  </Page>;
 }
-
-const styles = StyleSheet.create({
-  scrollView: {
-    flex: 1,
-  },
-  contentContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-  },
-  container: {
-    maxWidth: MaxContentWidth,
-    flexGrow: 1,
-  },
-  titleContainer: {
-    gap: Spacing.three,
-    alignItems: 'center',
-    paddingHorizontal: Spacing.four,
-    paddingVertical: Spacing.six,
-  },
-  centerText: {
-    textAlign: 'center',
-  },
-  pressed: {
-    opacity: 0.7,
-  },
-  linkButton: {
-    flexDirection: 'row',
-    paddingHorizontal: Spacing.four,
-    paddingVertical: Spacing.two,
-    borderRadius: Spacing.five,
-    justifyContent: 'center',
-    gap: Spacing.one,
-    alignItems: 'center',
-  },
-  sectionsWrapper: {
-    gap: Spacing.five,
-    paddingHorizontal: Spacing.four,
-    paddingTop: Spacing.three,
-  },
-  collapsibleContent: {
-    alignItems: 'center',
-  },
-  imageTutorial: {
-    width: '100%',
-    aspectRatio: 296 / 171,
-    borderRadius: Spacing.three,
-    marginTop: Spacing.two,
-  },
-  imageReact: {
-    width: 100,
-    height: 100,
-    alignSelf: 'center',
-  },
-});
+const styles = StyleSheet.create({ overview: { gap: 24 }, level: { padding: 28 }, tag: { paddingHorizontal: 11, paddingVertical: 5, borderRadius: 8 }, total: { fontSize: 72, lineHeight: 80, fontWeight: '700', letterSpacing: -4 }, bar: { height: 8, borderRadius: 8 }, stat: { flexDirection: 'row', alignItems: 'center', gap: 18, paddingVertical: 21, flexWrap: 'wrap' }, statIcon: { width: 50, height: 50, borderRadius: 12, justifyContent: 'center', alignItems: 'center' }, badge: { width: 87, height: 87, borderRadius: 24, justifyContent: 'center', alignItems: 'center' }, catalog: { flexDirection: 'row', flexWrap: 'wrap', gap: 14 }, landmark: { minHeight: 64, borderWidth: 1, borderRadius: 12, padding: 16, flexDirection: 'row', alignItems: 'center', gap: 12 } });

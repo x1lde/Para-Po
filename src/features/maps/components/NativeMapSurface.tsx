@@ -1,3 +1,4 @@
+import { useTheme } from '@/hooks/use-theme';
 import { Camera, GeoJSONSource, Layer, Map, type CameraRef } from '@maplibre/maplibre-react-native';
 import type { FeatureCollection, LineString, Point } from 'geojson';
 import { useEffect, useRef, useState } from 'react';
@@ -8,15 +9,19 @@ import { MapStatus } from './MapStatus';
 import { accuracyCircle } from '../services/accuracy-circle';
 
 export default function NativeMapSurface({ scene, onRetry, focusRequest = 0, focusMode = 'journey', onMarkerPress, selectedMarkerId, selectedRouteId }: TransportMapProps & { onRetry: () => void }) {
+  const theme = useTheme();
   const [status, setStatus] = useState<'loading' | 'ready' | 'failed'>('loading');
   const camera = useRef<CameraRef>(null);
+  const sceneRef = useRef(scene);
+  useEffect(() => { sceneRef.current = scene; }, [scene]);
   useEffect(() => {
     if (status !== 'ready') return;
-    const user = scene.markers.find((marker) => marker.kind === 'user');
-    const view = focusMode === 'user' && user ? { center: user.coordinate, zoom: 15 } : getMapViewport(scene, false);
+    const currentScene = sceneRef.current;
+    const user = currentScene.markers.find((marker) => marker.kind === 'user');
+    const view = focusMode === 'user' && user ? { center: user.coordinate, zoom: 15 } : getMapViewport(currentScene, false);
     if ('bounds' in view) camera.current?.fitBounds(view.bounds, { padding: view.padding, duration: 500 });
     else camera.current?.flyTo({ ...view, duration: 500 });
-  }, [focusRequest, focusMode, scene, status]);
+  }, [focusRequest, focusMode, status]);
   useEffect(() => {
     if (status !== 'loading') return;
     const timer = setTimeout(() => setStatus('failed'), 20000);
@@ -43,11 +48,11 @@ export default function NativeMapSurface({ scene, onRetry, focusRequest = 0, foc
         onDidFailLoadingMap={() => setStatus('failed')}>
         <Camera ref={camera} initialViewState={getMapViewport(scene)} />
         {uncertainty && <GeoJSONSource id="gps-accuracy" data={uncertainty}>
-          <Layer id="gps-accuracy-fill" type="fill" paint={{ 'fill-color': '#7856c4', 'fill-opacity': 0.16 }} />
-          <Layer id="gps-accuracy-edge" type="line" paint={{ 'line-color': '#7856c4', 'line-width': 1 }} />
+          <Layer id="gps-accuracy-fill" type="fill" paint={{ 'fill-color': theme.gold, 'fill-opacity': 0.16 }} />
+          <Layer id="gps-accuracy-edge" type="line" paint={{ 'line-color': theme.gold, 'line-width': 1 }} />
         </GeoJSONSource>}
         {lines.features.length > 0 && <GeoJSONSource id="transport-paths" data={lines}>
-          <Layer id="transport-lines" type="line" paint={{ 'line-color': ['case', ['get', 'selected'], '#e58a00', '#208AEF'], 'line-width': ['case', ['get', 'selected'], 6, 4] }} />
+          <Layer id="transport-lines" type="line" paint={{ 'line-color': ['case', ['get', 'selected'], theme.orange, theme.teal], 'line-width': ['case', ['get', 'selected'], 6, 4] }} />
         </GeoJSONSource>}
         {points.features.length > 0 && <GeoJSONSource id="transport-points" data={points} onPress={(event) => {
           const feature = event.nativeEvent.features[0];
@@ -56,12 +61,12 @@ export default function NativeMapSurface({ scene, onRetry, focusRequest = 0, foc
           if (marker) onMarkerPress?.(marker);
         }}>
           <Layer id="transport-markers" type="circle" paint={{
-            'circle-radius': ['case', ['get', 'selected'], 11, 7], 'circle-stroke-width': ['case', ['get', 'selected'], 4, 2], 'circle-stroke-color': ['case', ['get', 'selected'], '#e58a00', '#ffffff'],
-            'circle-color': ['match', ['get', 'kind'], 'boarding', '#208AEF', 'destination', '#d33d46', 'user', '#7856c4', '#32854b'],
+            'circle-radius': ['case', ['get', 'selected'], 11, 7], 'circle-stroke-width': ['case', ['get', 'selected'], 4, 2], 'circle-stroke-color': ['case', ['get', 'selected'], theme.orange, '#ffffff'],
+            'circle-color': ['match', ['get', 'kind'], 'boarding', theme.teal, 'destination', theme.orange, 'user', theme.gold, theme.green],
           }} />
           <Layer id="transport-labels" type="symbol" layout={{
             'text-field': ['get', 'name'], 'text-size': 12, 'text-offset': [0, 1.5], 'text-anchor': 'top',
-          }} paint={{ 'text-color': '#222222', 'text-halo-color': '#ffffff', 'text-halo-width': 2 }} />
+          }} paint={{ 'text-color': '#24343B', 'text-halo-color': '#ffffff', 'text-halo-width': 2 }} />
         </GeoJSONSource>}
       </Map>
       {status === 'loading' && <View style={styles.loading} pointerEvents="none">
